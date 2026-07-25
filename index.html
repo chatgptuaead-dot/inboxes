@@ -17,7 +17,7 @@
     --bad:#E3120B;
     --badbg:#FBE3E2;
     --good:#0B7A4B;
-    --c0:#EAF2F8; --c1:#FBEEE6; --c2:#E9F5EE; --c3:#F3EDF8; --c4:#FCF6E0; --c5:#EDEFF3;
+    --c0:#CBDFF0; --c1:#F4DAC3; --c2:#C9E5D5; --c3:#E1D4EE; --c4:#F7E7B0; --c5:#DEDAD1;
     --shadow:0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --serif:"Georgia","Times New Roman",serif;
@@ -27,7 +27,7 @@
       --paper:#151515; --card:#1E1E1E; --ink:#F2EFEA; --ink-2:#A9A49C; --ink-3:#7C7770;
       --soft:#3A3A3A; --hard:#EDE9E3;
       --bad:#FF6B63; --badbg:#3A1D1C; --good:#4ED397;
-      --c0:#1B2A36; --c1:#33261C; --c2:#1B3025; --c3:#2A2136; --c4:#332C15; --c5:#252525;
+      --c0:#24455F; --c1:#4E3826; --c2:#204A32; --c3:#3C2D52; --c4:#4D411A; --c5:#37342C;
       --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
     }
   }
@@ -104,14 +104,17 @@
   .cell.eb{box-shadow:inset 0 -2.5px 0 var(--hard)}
   .cell.er{box-shadow:inset -2.5px 0 0 var(--hard)}
   .cell.eb.er{box-shadow:inset 0 -2.5px 0 var(--hard), inset -2.5px 0 0 var(--hard)}
+  /* a finished box reads as one solid slab: no outline, no inner grid lines */
+  .cell.fill{border-color:transparent}
   .cell.bad{background:var(--badbg) !important}
   .cell.bad .num{color:var(--bad)}
   .cell .num{pointer-events:none;line-height:1}
   .preview{position:absolute;pointer-events:none;border:2.5px dashed var(--red);
     background:rgba(227,18,11,.08);z-index:5;display:grid;place-items:center}
   .preview.ok{border-style:solid;border-color:var(--good);background:rgba(11,122,75,.10)}
-  .preview span{font-family:var(--sans);font-size:11px;font-weight:700;
-    background:var(--ink);color:var(--paper);padding:1px 6px;border-radius:999px}
+  .preview span{font-family:var(--serif);font-size:17px;font-weight:700;
+    background:var(--ink);color:var(--paper);min-width:30px;text-align:center;
+    padding:2px 8px;border-radius:999px}
 
   .tools{display:flex;gap:8px;justify-content:center;margin:12px 0 4px;flex-wrap:wrap}
   .tool{border:1px solid var(--soft);background:var(--card);border-radius:9px;
@@ -306,9 +309,9 @@ function tile(w, h, rng, maxArea){
         cands.push([ww,hh]);
       }
     }
-    // prefer bigger boxes; only fall back to a single square if nothing else fits
-    const pool = cands.filter(([a,b]) => a*b > 1);
-    const use = pool.length ? pool : cands;
+    // never place a single square — a "1" gives the answer away for free
+    const use = cands.filter(([a,b]) => a*b > 1);
+    if (!use.length) return null;   // this layout dead-ends; the caller re-rolls
     let total = 0;
     const weights = use.map(([a,b]) => { const t = a*b; total += t; return t; });
     let pick = rng()*total, k = 0;
@@ -450,6 +453,7 @@ function generate(mode, num){
 
   for (let attempt=0; attempt<600; attempt++){
     const rects = tile(w, h, rng, GRID.maxArea);
+    if (!rects) continue;
     if (rects.length < GRID.minBoxes || rects.length > GRID.maxBoxes) continue;
 
     const clueAt = new Int16Array(N).fill(-1);
@@ -635,11 +639,54 @@ function boxOk(b){
   return count === 1 && val === b.w*b.h;
 }
 
-/* ---------- rendering ---------- */
+/* ---------- rendering ----------
+   With no outlines, touching boxes are told apart by colour alone, so the
+   fills have to be a proper map colouring. Greedy colouring in smallest-last
+   order keeps a planar map inside six colours.                            */
+function colourBoxes(okById){
+  const ids = [...boxes.keys()].filter(id => okById.get(id));
+  const pos = new Map(ids.map((id,i) => [id,i]));
+  const adj = ids.map(() => new Set());
+  for (let i=0;i<P.w*P.h;i++){
+    const a = region[i];
+    if (a === -1 || !okById.get(a)) continue;
+    const r=(i/P.w)|0, c=i%P.w;
+    for (const j of [c < P.w-1 ? i+1 : -1, r < P.h-1 ? i+P.w : -1]){
+      if (j < 0) continue;
+      const b = region[j];
+      if (b === -1 || b === a || !okById.get(b)) continue;
+      adj[pos.get(a)].add(pos.get(b));
+      adj[pos.get(b)].add(pos.get(a));
+    }
+  }
+  const deg = adj.map(s => s.size);
+  const gone = new Array(ids.length).fill(false);
+  const order = [];
+  for (let k=0;k<ids.length;k++){
+    let pick = -1;
+    for (let i=0;i<ids.length;i++) if (!gone[i] && (pick < 0 || deg[i] < deg[pick])) pick = i;
+    gone[pick] = true; order.push(pick);
+    for (const nb of adj[pick]) if (!gone[nb]) deg[nb]--;
+  }
+  const colourOf = new Array(ids.length).fill(-1);
+  const out = new Map();
+  for (let k=order.length-1;k>=0;k--){
+    const v = order[k];
+    const used = new Set();
+    for (const nb of adj[v]) if (colourOf[nb] >= 0) used.add(colourOf[nb]);
+    let col = 0;
+    while (col < 5 && used.has(col)) col++;
+    colourOf[v] = col;
+    out.set(ids[v], col);
+  }
+  return out;
+}
+
 function render(){
   const cells = boardEl.children;
   const okById = new Map();
   for (const b of boxes.values()) okById.set(b.id, boxOk(b));
+  const colour = colourBoxes(okById);
 
   let covered = 0;
   for (let i=0;i<P.w*P.h;i++){
@@ -649,15 +696,16 @@ function render(){
     if (id === -1) continue;
     covered++;
     if (okById.get(id)){
-      const b = boxes.get(id);
-      el.style.background = "var(--c" + ((b.r*3 + b.c*5) % 6) + ")";
+      el.classList.add("fill");
+      el.style.background = "var(--c" + colour.get(id) + ")";
     } else {
+      // wrong size: left unfilled, just shaded, and still outlined
       el.classList.add("bad");
+      if (r===0 || region[i-P.w] !== id) el.classList.add("et");
+      if (c===0 || region[i-1] !== id) el.classList.add("el");
+      if (r===P.h-1 || region[i+P.w] !== id) el.classList.add("eb");
+      if (c===P.w-1 || region[i+1] !== id) el.classList.add("er");
     }
-    if (r===0 || region[i-P.w] !== id) el.classList.add("et");
-    if (c===0 || region[i-1] !== id) el.classList.add("el");
-    if (r===P.h-1 || region[i+P.w] !== id) el.classList.add("eb");
-    if (c===P.w-1 || region[i+1] !== id) el.classList.add("er");
   }
 
   const pct = Math.round(covered/(P.w*P.h)*100);
@@ -695,7 +743,7 @@ function showPreview(r0,c0,r1,c1){
     if (ci !== -1){ count++; val = P.clues[ci].val; }
   }
   pv.classList.toggle("ok", count === 1 && val === w*h);
-  pv.querySelector("span").textContent = w + "×" + h + " = " + (w*h);
+  pv.querySelector("span").textContent = w*h;   // squares covered so far
 }
 boardEl.addEventListener("pointerdown", e => {
   if (!P || finished) return;

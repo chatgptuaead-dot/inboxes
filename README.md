@@ -10,7 +10,9 @@ Numbers sit on a 9×11 grid. Cut the whole grid into rectangular boxes so that:
 - that number is **how many squares the box covers** (a 4 might be 2×2, 1×4 or 4×1);
 - boxes never overlap, and no square is left outside a box.
 
-Drag across the grid to draw a box. Tap a box to take it away. Boxes that cannot be right are shaded red as you go.
+Drag across the grid to draw a box — the running count of squares covered shows as you drag, and turns green the moment it matches the number inside. Tap a box to take it away.
+
+A finished box fills as a solid slab of colour. A box whose size doesn't match its number stays unfilled and is shaded red instead. Numbers are never smaller than 2.
 
 ## Two modes
 
@@ -25,7 +27,7 @@ Every puzzle is derived purely from its seed string — `inboxes-v2|d206`, `inbo
 
 Generation works backwards from a finished tiling:
 
-1. **Tile the grid.** Each new rectangle is anchored at the first uncovered square in reading order, which guarantees that square is its top-left corner — so the tiling can never strand an unfillable hole. Larger boxes are weighted more heavily; single squares only appear when nothing else fits.
+1. **Tile the grid.** Each new rectangle is anchored at the first uncovered square in reading order, which guarantees that square is its top-left corner — so the tiling can never strand an unfillable hole. Larger boxes are weighted more heavily, and single squares are refused outright: a layout that would force one is thrown away and re-rolled, so no puzzle ever contains a give-away `1`.
 2. **Drop a number** at a random square inside each rectangle.
 3. **Rate the result** with a solver that mimics human reasoning, using only two forced-move rules:
    - *naked* — a number has just one box left that fits;
