@@ -17,7 +17,6 @@
     --bad:#E3120B;
     --badbg:#FBE3E2;
     --good:#0B7A4B;
-    --c0:#CBDFF0; --c1:#F4DAC3; --c2:#C9E5D5; --c3:#E1D4EE; --c4:#F7E7B0; --c5:#DEDAD1;
     --shadow:0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --serif:"Georgia","Times New Roman",serif;
@@ -27,7 +26,6 @@
       --paper:#151515; --card:#1E1E1E; --ink:#F2EFEA; --ink-2:#A9A49C; --ink-3:#7C7770;
       --soft:#3A3A3A; --hard:#EDE9E3;
       --bad:#FF6B63; --badbg:#3A1D1C; --good:#4ED397;
-      --c0:#24455F; --c1:#4E3826; --c2:#204A32; --c3:#3C2D52; --c4:#4D411A; --c5:#37342C;
       --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
     }
   }
@@ -554,7 +552,7 @@ function openPuzzle(mode, num){
 
     const saved = LS.get(stateKey(mode, num), null);
     if (saved && Array.isArray(saved.boxes)){
-      for (const b of saved.boxes) placeBox(b.r, b.c, b.w, b.h);
+      for (const b of saved.boxes) placeBox(b.r, b.c, b.w, b.h, b.ci);
       hintsUsed = saved.hints || 0;
       elapsed = saved.elapsed || 0;
     }
@@ -591,16 +589,39 @@ function buildBoard(){
   boardEl.appendChild(pv);
 }
 
+/* ---------- box colours ----------
+   Every box on the board gets its own colour, fixed the moment it is drawn
+   and never recomputed, so adding or removing a box leaves every other box
+   looking exactly as it did. Hues step by the golden angle, which keeps even
+   neighbouring indices far apart on the wheel.                             */
+const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+function paletteColour(i){
+  const hue = (i * 137.508) % 360;
+  return darkQuery.matches
+    ? "hsl(" + hue.toFixed(1) + " " + (34 + (i%3)*6) + "% " + (24 + (i%4)*4) + "%)"
+    : "hsl(" + hue.toFixed(1) + " " + (58 + (i%3)*8) + "% " + (82 + (i%4)*3) + "%)";
+}
+function freeColour(){
+  const used = new Set();
+  for (const b of boxes.values()) used.add(b.ci);
+  let i = 0;
+  while (used.has(i)) i++;      // at most 99 boxes fit, so this always lands
+  return i;
+}
+
 /* ---------- box operations ---------- */
-const snapshot = () => ({boxes: [...boxes.values()].map(b => ({r:b.r,c:b.c,w:b.w,h:b.h})), hints: hintsUsed});
+const snapshot = () => ({
+  boxes: [...boxes.values()].map(b => ({r:b.r, c:b.c, w:b.w, h:b.h, ci:b.ci})),
+  hints: hintsUsed
+});
 function restore(s){
   region.fill(-1); boxes = new Map();
-  for (const b of s.boxes) placeBox(b.r,b.c,b.w,b.h);
+  for (const b of s.boxes) placeBox(b.r,b.c,b.w,b.h,b.ci);
   hintsUsed = s.hints;
 }
-function placeBox(r,c,w,h){
+function placeBox(r,c,w,h,ci){
   const id = nextId++;
-  boxes.set(id, {id,r,c,w,h});
+  boxes.set(id, {id, r, c, w, h, ci: (ci === undefined ? freeColour() : ci)});
   for (let rr=r;rr<r+h;rr++) for (let cc=c;cc<c+w;cc++) region[rr*P.w+cc] = id;
   return id;
 }
@@ -639,54 +660,11 @@ function boxOk(b){
   return count === 1 && val === b.w*b.h;
 }
 
-/* ---------- rendering ----------
-   With no outlines, touching boxes are told apart by colour alone, so the
-   fills have to be a proper map colouring. Greedy colouring in smallest-last
-   order keeps a planar map inside six colours.                            */
-function colourBoxes(okById){
-  const ids = [...boxes.keys()].filter(id => okById.get(id));
-  const pos = new Map(ids.map((id,i) => [id,i]));
-  const adj = ids.map(() => new Set());
-  for (let i=0;i<P.w*P.h;i++){
-    const a = region[i];
-    if (a === -1 || !okById.get(a)) continue;
-    const r=(i/P.w)|0, c=i%P.w;
-    for (const j of [c < P.w-1 ? i+1 : -1, r < P.h-1 ? i+P.w : -1]){
-      if (j < 0) continue;
-      const b = region[j];
-      if (b === -1 || b === a || !okById.get(b)) continue;
-      adj[pos.get(a)].add(pos.get(b));
-      adj[pos.get(b)].add(pos.get(a));
-    }
-  }
-  const deg = adj.map(s => s.size);
-  const gone = new Array(ids.length).fill(false);
-  const order = [];
-  for (let k=0;k<ids.length;k++){
-    let pick = -1;
-    for (let i=0;i<ids.length;i++) if (!gone[i] && (pick < 0 || deg[i] < deg[pick])) pick = i;
-    gone[pick] = true; order.push(pick);
-    for (const nb of adj[pick]) if (!gone[nb]) deg[nb]--;
-  }
-  const colourOf = new Array(ids.length).fill(-1);
-  const out = new Map();
-  for (let k=order.length-1;k>=0;k--){
-    const v = order[k];
-    const used = new Set();
-    for (const nb of adj[v]) if (colourOf[nb] >= 0) used.add(colourOf[nb]);
-    let col = 0;
-    while (col < 5 && used.has(col)) col++;
-    colourOf[v] = col;
-    out.set(ids[v], col);
-  }
-  return out;
-}
-
+/* ---------- rendering ---------- */
 function render(){
   const cells = boardEl.children;
   const okById = new Map();
   for (const b of boxes.values()) okById.set(b.id, boxOk(b));
-  const colour = colourBoxes(okById);
 
   let covered = 0;
   for (let i=0;i<P.w*P.h;i++){
@@ -697,7 +675,7 @@ function render(){
     covered++;
     if (okById.get(id)){
       el.classList.add("fill");
-      el.style.background = "var(--c" + colour.get(id) + ")";
+      el.style.background = paletteColour(boxes.get(id).ci);
     } else {
       // wrong size: left unfilled, just shaded, and still outlined
       el.classList.add("bad");
@@ -800,7 +778,7 @@ function hint(){
 function saveState(){
   if (!P) return;
   LS.set(stateKey(P.mode, P.num), {
-    boxes: [...boxes.values()].map(b => ({r:b.r,c:b.c,w:b.w,h:b.h})),
+    boxes: [...boxes.values()].map(b => ({r:b.r, c:b.c, w:b.w, h:b.h, ci:b.ci})),
     hints: hintsUsed,
     elapsed: elapsed + (finished ? 0 : Date.now() - startedAt)
   });
@@ -974,6 +952,10 @@ document.addEventListener("keydown", e => {
 });
 window.addEventListener("resize", () => {
   if (P && !$("viewGame").classList.contains("hide")){ buildBoard(); render(); }
+});
+// fills are computed in JS, so they need redrawing when the theme flips
+darkQuery.addEventListener("change", () => {
+  if (P && !$("viewGame").classList.contains("hide")) render();
 });
 window.addEventListener("beforeunload", saveState);
 
