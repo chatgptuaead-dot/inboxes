@@ -652,10 +652,16 @@ function clearArea(r,c,w,h){
 function commit(r0,c0,r1,c1){
   const r = Math.min(r0,r1), c = Math.min(c0,c1);
   const h = Math.abs(r1-r0)+1, w = Math.abs(c1-c0)+1;
-  undoStack.push(snapshot());
-  if (w===1 && h===1 && region[r*P.w+c] !== -1){
-    removeBox(region[r*P.w+c]);       // a tap on an existing box takes it away
+
+  if (w===1 && h===1){
+    // a tap, not a drag: it only ever takes an existing box away, and on
+    // bare grid it does nothing at all
+    const id = region[r*P.w+c];
+    if (id === -1) return;
+    undoStack.push(snapshot());
+    removeBox(id);
   } else {
+    undoStack.push(snapshot());
     clearArea(r,c,w,h);
     placeBox(r,c,w,h);
   }
@@ -723,6 +729,7 @@ function showPreview(r0,c0,r1,c1){
   const pv = $("preview");
   const r = Math.min(r0,r1), c = Math.min(c0,c1);
   const h = Math.abs(r1-r0)+1, w = Math.abs(c1-c0)+1;
+  if (w*h === 1){ pv.classList.add("hide"); return; }   // nothing gets drawn yet
   pv.classList.remove("hide");
   pv.style.left = (c*cellPx) + "px";
   pv.style.top = (r*cellPx) + "px";
