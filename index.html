@@ -14,8 +14,6 @@
     --ink-3:#8E8E8E;
     --soft:#DCD6CC;
     --hard:#121212;
-    --bad:#E3120B;
-    --badbg:#FBE3E2;
     --good:#0B7A4B;
     --shadow:0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -25,7 +23,7 @@
     :root{
       --paper:#151515; --card:#1E1E1E; --ink:#F2EFEA; --ink-2:#A9A49C; --ink-3:#7C7770;
       --soft:#3A3A3A; --hard:#EDE9E3;
-      --bad:#FF6B63; --badbg:#3A1D1C; --good:#4ED397;
+      --good:#4ED397;
       --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
     }
   }
@@ -107,11 +105,18 @@
   .cell.tile.gr::before{right:var(--gap)}
   .cell.tile.gb::before{bottom:var(--gap)}
   .cell.tile.gl::before{left:var(--gap)}
-  .cell.bad .num{color:var(--bad)}
+  /* still the wrong size: its own colour, only washed out */
+  .cell.tile.bad::before{opacity:.4}
+  /* the right number of squares: round the box's outer corners */
+  .cell.tile:not(.bad).gt.gl::before{border-top-left-radius:var(--round)}
+  .cell.tile:not(.bad).gt.gr::before{border-top-right-radius:var(--round)}
+  .cell.tile:not(.bad).gb.gl::before{border-bottom-left-radius:var(--round)}
+  .cell.tile:not(.bad).gb.gr::before{border-bottom-right-radius:var(--round)}
   .cell .num{pointer-events:none;line-height:1;position:relative;z-index:1}
   /* the drag preview is just the box-to-be, in the colour it will take */
   .preview{position:absolute;pointer-events:none;background:var(--pfill);
     z-index:5;display:grid;place-items:center}
+  .preview.ok{border-radius:var(--round)}
   .preview span{font-family:var(--serif);font-size:17px;font-weight:700;
     background:var(--ink);color:var(--paper);min-width:30px;text-align:center;
     padding:2px 8px;border-radius:999px}
@@ -578,6 +583,7 @@ function buildBoard(){
   boardEl.style.gridTemplateRows = "repeat(" + P.h + ", " + cellPx + "px)";
   gapPx = Math.max(2, Math.round(cellPx*0.055));
   boardEl.style.setProperty("--gap", gapPx + "px");
+  boardEl.style.setProperty("--round", Math.max(3, Math.round(cellPx*0.11)) + "px");
   boardEl.innerHTML = "";
   for (let i=0;i<P.w*P.h;i++){
     const r=(i/P.w)|0, c=i%P.w;
@@ -687,14 +693,10 @@ function render(){
     el.className = "cell" + (r===0?" r0":"") + (c===0?" c0":"");
     if (id === -1) continue;
     covered++;
+    // every box wears its own colour; a wrong one just wears it faintly
     el.classList.add("tile");
-    if (okById.get(id)){
-      el.style.setProperty("--fill", paletteColour(boxes.get(id).ci));
-    } else {
-      // wrong size: shaded rather than coloured in, but still no outline
-      el.classList.add("bad");
-      el.style.setProperty("--fill", "var(--badbg)");
-    }
+    el.style.setProperty("--fill", paletteColour(boxes.get(id).ci));
+    if (!okById.get(id)) el.classList.add("bad");
     // pull the fill in wherever this box ends, so boxes never touch
     if (r===0 || region[i-P.w] !== id) el.classList.add("gt");
     if (c===0 || region[i-1] !== id) el.classList.add("gl");
@@ -748,6 +750,15 @@ function showPreview(r0,c0,r1,c1){
   pv.style.width = (w*cellPx - gapPx*2) + "px";
   pv.style.height = (h*cellPx - gapPx*2) + "px";
   pv.style.setProperty("--pfill", prospectiveColour(r,c,w,h));
+
+  // exactly one number, and it matches the area? then preview it rounded,
+  // the same way it will look once placed
+  let count = 0, val = -1;
+  for (let rr=r;rr<r+h;rr++) for (let cc=c;cc<c+w;cc++){
+    const ci = P.clueAt[rr*P.w+cc];
+    if (ci !== -1){ count++; val = P.clues[ci].val; }
+  }
+  pv.classList.toggle("ok", count === 1 && val === w*h);
   pv.querySelector("span").textContent = w*h;   // squares covered so far
 }
 boardEl.addEventListener("pointerdown", e => {
