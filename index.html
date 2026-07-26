@@ -79,17 +79,23 @@
     padding:7px 17px;font-size:13px;font-weight:600}
   .tab:hover{border-color:var(--ink-3)}
   .tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px}
-  .chip{border:1px solid var(--soft);background:var(--card);border-radius:9px;
-    padding:9px 5px;font-family:var(--serif);font-weight:700;font-size:15px;
-    display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.15}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:8px}
+  .chip{position:relative;border:1px solid var(--soft);background:var(--card);border-radius:9px}
   .chip:hover{border-color:var(--ink-3)}
+  /* symmetric padding keeps the number centred clear of the replay button */
+  .chipmain{width:100%;background:none;border:none;border-radius:9px;
+    padding:9px 22px;font-family:var(--serif);font-weight:700;font-size:15px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.15}
   .chip i{font-family:var(--sans);font-style:normal;font-size:10px;font-weight:600;
     color:var(--ink-3);letter-spacing:.02em}
   .chip.solved{border-color:var(--good)}
   .chip.solved i{color:var(--good)}
   .chip.part{border-color:var(--red)}
   .chip.part i{color:var(--red)}
+  .chipreplay{position:absolute;top:3px;right:3px;width:21px;height:21px;padding:0;
+    border:1px solid var(--soft);border-radius:999px;background:var(--card);
+    font-size:11px;line-height:1;display:grid;place-items:center;color:var(--ink-3)}
+  .chipreplay:hover{border-color:var(--red);color:var(--red)}
   .btn{border:1px solid var(--soft);background:var(--card);border-radius:8px;
     padding:7px 13px;font-size:13px;font-weight:600}
   .btn:hover{border-color:var(--ink-3)}
@@ -628,12 +634,27 @@ function renderArchive(){
     const rec = done[n];
     if (rec) solved++;
     const started = !rec && !!LS.get(stateKey(archiveTab, n), null);
-    const b = document.createElement("button");
-    b.className = "chip" + (rec ? " solved" : (started ? " part" : ""));
-    b.innerHTML = (daily ? "#" : "E") + n +
+    const cell = document.createElement("div");
+    cell.className = "chip" + (rec ? " solved" : (started ? " part" : ""));
+
+    const main = document.createElement("button");
+    main.className = "chipmain";
+    main.innerHTML = (daily ? "#" : "E") + n +
       "<i>" + (rec ? "✓ " + fmtTime(rec.t) : (started ? "resume" : "play")) + "</i>";
-    b.onclick = () => openPuzzle(archiveTab, n, "archive");
-    frag.appendChild(b);
+    main.title = rec ? "Look back at your solution" : (started ? "Pick up where you left off" : "Play");
+    main.onclick = () => openPuzzle(archiveTab, n, "archive");
+    cell.appendChild(main);
+
+    // anything already touched can be wiped and played again from scratch
+    if (rec || started){
+      const again = document.createElement("button");
+      again.className = "chipreplay";
+      again.textContent = "↻";
+      again.title = "Play again from an empty grid";
+      again.onclick = e => { e.stopPropagation(); replay(archiveTab, n); };
+      cell.appendChild(again);
+    }
+    frag.appendChild(cell);
   }
   const wrap = $("chips");
   wrap.innerHTML = "";
@@ -669,6 +690,9 @@ function openPuzzle(mode, num, from){
       hintsUsed = saved.hints || 0;
       elapsed = saved.elapsed || 0;
     }
+    // reopening a puzzle you already finished shows the solved board as it
+    // stands, rather than announcing the win all over again
+    if (isComplete()) finished = true;
     buildBoard();
     $("gameSub").textContent = (mode === "daily" ? "Puzzle #" + num : "Endless E" + num) + " · " + P.w + "×" + P.h;
     startTimer();
@@ -932,9 +956,18 @@ function startTimer(){
 }
 
 /* ---------- winning ---------- */
+function isComplete(){
+  for (let i=0;i<region.length;i++) if (region[i] === -1) return false;
+  for (const b of boxes.values()) if (!boxOk(b)) return false;
+  return true;
+}
+/* wipe the board and start this puzzle over; the recorded result stands */
+function replay(mode, num){
+  LS.del(stateKey(mode, num));
+  openPuzzle(mode, num, "archive");
+}
 function checkWin(){
-  for (let i=0;i<region.length;i++) if (region[i] === -1) return;
-  for (const b of boxes.values()) if (!boxOk(b)) return;
+  if (!isComplete()) return;
 
   finished = true;
   clearInterval(tickHandle);
@@ -1034,7 +1067,11 @@ function showArchive(){
 function goBack(){ openedFrom === "archive" ? showArchive() : goHome(); }
 
 /* ---------- wiring ---------- */
-$("cardDaily").onclick = () => openPuzzle("daily", todayNumber());
+// the card says "Play again" once solved, so that is what it should do
+$("cardDaily").onclick = () => {
+  const n = todayNumber();
+  progress.daily[n] ? replay("daily", n) : openPuzzle("daily", n);
+};
 $("cardEndless").onclick = () => openPuzzle("endless", progress.endlessAt);
 $("btnArchive").onclick = showArchive;
 $("btnArchiveBack").onclick = goHome;
