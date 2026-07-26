@@ -82,10 +82,14 @@
   .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:8px}
   .chip{position:relative;border:1px solid var(--soft);background:var(--card);border-radius:9px}
   .chip:hover{border-color:var(--ink-3)}
-  /* symmetric padding keeps the number centred clear of the replay button */
   .chipmain{width:100%;background:none;border:none;border-radius:9px;
-    padding:9px 22px;font-family:var(--serif);font-weight:700;font-size:15px;
+    padding:9px 6px;font-family:var(--serif);font-weight:700;font-size:15px;
     display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.15}
+  /* only the number needs to clear the replay button, and padding both
+     sides keeps it centred; the date and status get the full width */
+  .chip .no{padding:0 20px}
+  .chip em{font-family:var(--sans);font-style:normal;font-size:9.5px;font-weight:600;
+    color:var(--ink-3);letter-spacing:.01em;white-space:nowrap}
   .chip i{font-family:var(--sans);font-style:normal;font-size:10px;font-weight:600;
     color:var(--ink-3);letter-spacing:.02em}
   .chip.solved{border-color:var(--good)}
@@ -168,6 +172,9 @@
   .stat div{flex:1;min-width:78px}
   .stat .k{font-family:var(--serif);font-size:24px;font-weight:700;color:var(--ink)}
   .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3)}
+  .modal textarea{width:100%;margin-top:8px;padding:9px;border:1px solid var(--soft);
+    border-radius:8px;background:var(--paper);color:var(--ink);resize:vertical;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.4}
   .demo{display:grid;grid-template-columns:repeat(4,34px);margin:14px auto;
     border:2.5px solid var(--hard);width:max-content}
   .demo div{height:34px;display:grid;place-items:center;font-family:var(--serif);
@@ -326,6 +333,11 @@ function todayNumber(){
   return Math.floor((a - EPOCH)/86400000) + 1;
 }
 const seedFor = (mode, num) => "inboxes-v2|" + (mode === "daily" ? "d" : "e") + num;
+/* daily #1 fell on the epoch, so #n is n-1 days later */
+function dailyDate(n){
+  const d = new Date(EPOCH.getFullYear(), EPOCH.getMonth(), EPOCH.getDate() + n - 1);
+  return d.toLocaleDateString(undefined, {day:"numeric", month:"short", year:"numeric"});
+}
 
 /* ---------- lay the grid out as rectangles ----------
    Anchoring each new rectangle at the first uncovered square (reading order)
@@ -585,6 +597,66 @@ function reconcile(){
   if (changed) saveProgress();
 }
 
+/* ---------- moving progress between addresses ----------
+   localStorage is tied to the exact origin, so a player who moves to a
+   different URL arrives with nothing. These two carry it across — and
+   double as a way to sync a phone with a laptop. */
+function exportData(){
+  const boards = {};
+  for (let i=0;i<localStorage.length;i++){
+    const m = (localStorage.key(i) || "").match(/^inboxes\.v2\.state\.(daily|endless)\.(\d+)$/);
+    if (m) boards[m[1] + "." + m[2]] = LS.get(stateKey(m[1], +m[2]), null);
+  }
+  return JSON.stringify({
+    app: "parcels", version: 2, exported: new Date().toISOString(),
+    progress, boards
+  });
+}
+/* returns null on success, or a sentence explaining what went wrong */
+function importData(text){
+  let d;
+  try { d = JSON.parse(text); }
+  catch(e){ return "That isn't readable — paste the whole block, braces and all."; }
+  if (!d || typeof d !== "object" || !d.progress || typeof d.progress !== "object")
+    return "That doesn't look like a Parcels backup.";
+  const p = d.progress;
+
+  // merging keeps the better of the two, so importing never costs you a result
+  const mergeBook = (mine, theirs) => {
+    for (const k in (theirs || {})){
+      const t = theirs[k];
+      if (!t || typeof t.t !== "number") continue;
+      if (!mine[k] || t.t < mine[k].t) mine[k] = {t: t.t, h: t.h || 0};
+    }
+  };
+  mergeBook(progress.daily, p.daily);
+  mergeBook(progress.endless, p.endless);
+
+  if (typeof p.endlessAt === "number")
+    progress.endlessAt = Math.max(progress.endlessAt || 1, p.endlessAt);
+  if (typeof p.best === "number" && p.best > 0)
+    progress.best = progress.best ? Math.min(progress.best, p.best) : p.best;
+  // a streak only means anything next to the day it was last extended
+  if (typeof p.lastDay === "number"){
+    if (p.lastDay > (progress.lastDay || 0)){
+      progress.lastDay = p.lastDay;
+      progress.streak = p.streak || 0;
+    } else if (p.lastDay === progress.lastDay){
+      progress.streak = Math.max(progress.streak || 0, p.streak || 0);
+    }
+  }
+  for (const k in (d.boards || {})){
+    const m = k.match(/^(daily|endless)\.(\d+)$/);
+    if (!m) continue;
+    const key = stateKey(m[1], +m[2]);
+    if (localStorage.getItem(key)) continue;      // never paint over local work
+    LS.set(key, d.boards[k]);
+  }
+  saveProgress();
+  reconcile();
+  return null;
+}
+
 /* ---------- app state ---------- */
 let P = null;
 let region = null;
@@ -643,7 +715,8 @@ function renderArchive(){
 
     const main = document.createElement("button");
     main.className = "chipmain";
-    main.innerHTML = (daily ? "#" : "E") + n +
+    main.innerHTML = '<b class="no">' + (daily ? "#" : "E") + n + '</b>' +
+      (daily ? "<em>" + dailyDate(n) + "</em>" : "") +
       "<i>" + (rec ? "✓ " + fmtTime(rec.t) : (started ? "resume" : "play")) + "</i>";
     main.title = rec ? "Look back at your solution" : (started ? "Pick up where you left off" : "Play");
     main.onclick = () => openPuzzle(archiveTab, n, "archive");
@@ -1124,6 +1197,12 @@ $("btnStats").onclick = () => {
       '<div><div class="k">' + endlessSolved() + '</div><div class="l">Endless solved</div></div>' +
     '</div>' +
     '<p>Best time without hints: <b>' + (progress.best ? fmtTime(progress.best) : "—") + '</b></p>' +
+    '<p style="font-size:12.5px">Your record is kept by this browser, at this address. ' +
+      'Copy it to carry it to another one.</p>' +
+    '<div class="row">' +
+      '<button class="btn" data-act="export">Copy progress</button>' +
+      '<button class="btn" data-act="import">Restore progress</button>' +
+    '</div>' +
     '<div class="row">' +
       '<button class="btn" data-act="reset">Reset progress</button>' +
       '<button class="btn primary" data-act="ok">Close</button>' +
@@ -1132,10 +1211,53 @@ $("btnStats").onclick = () => {
       if (act === "reset"){
         progress = blankProgress();
         saveProgress(); close(); goHome(); toast("Progress reset");
+      } else if (act === "export"){
+        const text = exportData();
+        navigator.clipboard.writeText(text).then(
+          () => toast("Progress copied"),
+          () => { close(); showExport(text); }      // clipboard blocked: show it instead
+        );
+      } else if (act === "import"){
+        close(); askImport();
       } else close();
     }
   );
 };
+
+function showExport(text){
+  modal(
+    '<h3>Copy your progress</h3>' +
+    '<p>Select all of this and copy it, then paste it into <b>Restore progress</b> at the other address.</p>' +
+    '<textarea rows="7" id="exportBox" readonly></textarea>' +
+    '<div class="row"><button class="btn primary" data-act="ok">Done</button></div>',
+    (a, close) => close()
+  );
+  const box = $("exportBox");
+  box.value = text;
+  box.focus(); box.select();
+}
+
+function askImport(){
+  modal(
+    '<h3>Restore progress</h3>' +
+    '<p>Paste the block you copied from the other address. Anything already ' +
+      'on this browser is kept — the better time of the two wins.</p>' +
+    '<textarea rows="7" id="importBox" placeholder="{ … }"></textarea>' +
+    '<div class="row">' +
+      '<button class="btn" data-act="cancel">Cancel</button>' +
+      '<button class="btn primary" data-act="go">Restore</button>' +
+    '</div>',
+    (act, close) => {
+      if (act !== "go") return close();
+      const was = Object.keys(progress.daily).length + endlessSolved();
+      const err = importData(($("importBox").value || "").trim());
+      if (err) return toast(err);
+      const now = Object.keys(progress.daily).length + endlessSolved();
+      close(); goHome();
+      toast(now > was ? "Restored — " + (now - was) + " more solved" : "Restored");
+    }
+  );
+}
 
 document.addEventListener("keydown", e => {
   if ($("viewGame").classList.contains("hide") || document.querySelector(".scrim")) return;
