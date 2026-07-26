@@ -73,8 +73,23 @@
 
   .archive{margin-top:18px;padding-top:14px;border-top:1px solid var(--soft);
     display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
-  .archive input{width:88px;padding:6px 8px;border:1px solid var(--soft);border-radius:7px;
-    background:var(--card);color:var(--ink);font-family:inherit;font-size:13px}
+
+  .tabs{display:flex;gap:8px;margin:2px 0 14px}
+  .tab{border:1px solid var(--soft);background:var(--card);border-radius:999px;
+    padding:7px 17px;font-size:13px;font-weight:600}
+  .tab:hover{border-color:var(--ink-3)}
+  .tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px}
+  .chip{border:1px solid var(--soft);background:var(--card);border-radius:9px;
+    padding:9px 5px;font-family:var(--serif);font-weight:700;font-size:15px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.15}
+  .chip:hover{border-color:var(--ink-3)}
+  .chip i{font-family:var(--sans);font-style:normal;font-size:10px;font-weight:600;
+    color:var(--ink-3);letter-spacing:.02em}
+  .chip.solved{border-color:var(--good)}
+  .chip.solved i{color:var(--good)}
+  .chip.part{border-color:var(--red)}
+  .chip.part i{color:var(--red)}
   .btn{border:1px solid var(--soft);background:var(--card);border-radius:8px;
     padding:7px 13px;font-size:13px;font-weight:600}
   .btn:hover{border-color:var(--ink-3)}
@@ -105,8 +120,11 @@
   .cell.tile.gr::before{right:var(--gap)}
   .cell.tile.gb::before{bottom:var(--gap)}
   .cell.tile.gl::before{left:var(--gap)}
-  /* still the wrong size: its own colour, only washed out */
-  .cell.tile.bad::before{opacity:.4}
+  /* still the wrong size: a see-through wash that leaves the grid readable */
+  .cell.tile.bad{border-top:1px solid var(--soft);border-left:1px solid var(--soft)}
+  .cell.tile.bad.r0{border-top:none}
+  .cell.tile.bad.c0{border-left:none}
+  .cell.tile.bad::before{opacity:.3}
   /* the right number of squares: round the box's outer corners */
   .cell.tile:not(.bad).gt.gl::before{border-top-left-radius:var(--round)}
   .cell.tile:not(.bad).gt.gr::before{border-top-right-radius:var(--round)}
@@ -197,11 +215,20 @@
     </div>
 
     <div class="archive">
-      <span>Daily archive:</span>
-      <input type="number" id="archiveNum" min="1" step="1">
-      <button class="btn" id="btnGo">Go</button>
-      <button class="btn" id="btnToday">Today</button>
+      <button class="btn" id="btnArchive">Browse every puzzle →</button>
     </div>
+  </section>
+
+  <section id="viewArchive" class="hide">
+    <div class="gamebar">
+      <button class="back" id="btnArchiveBack">‹ Menu</button>
+      <div class="meta"><div class="a" id="archiveCount"></div></div>
+    </div>
+    <div class="tabs">
+      <button class="tab on" data-tab="daily">Daily</button>
+      <button class="tab" data-tab="endless">Endless</button>
+    </div>
+    <div class="chips" id="chips"></div>
   </section>
 
   <section id="viewGame" class="hide">
@@ -494,9 +521,11 @@ const LS = {
   del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
 const PROGRESS_KEY = "inboxes.v2.progress";
-const blankProgress = () => ({daily:{}, endlessDone:0, endlessAt:1, streak:0, lastDay:0, best:0});
+const blankProgress = () => ({daily:{}, endless:{}, endlessAt:1, streak:0, lastDay:0, best:0});
 let progress = Object.assign(blankProgress(), LS.get(PROGRESS_KEY, {}));
 progress.daily = progress.daily || {};
+progress.endless = progress.endless || {};
+const endlessSolved = () => Object.keys(progress.endless).length;
 const saveProgress = () => LS.set(PROGRESS_KEY, progress);
 const stateKey = (mode, num) => "inboxes.v2.state." + mode + "." + num;
 
@@ -508,7 +537,7 @@ let nextId = 1;
 let undoStack = [];
 let hintsUsed = 0;
 let elapsed = 0, startedAt = 0, tickHandle = null, finished = false;
-let viewDaily = todayNumber();
+let openedFrom = "home";
 let cellPx = 34;
 let gapPx = 2;
 let drag = null;
@@ -525,28 +554,54 @@ function toast(msg){
 /* ---------- home ---------- */
 function renderHome(){
   const today = todayNumber();
-  const d = progress.daily[viewDaily];
-  $("dailyNo").textContent = "Puzzle #" + viewDaily;
-  $("dailyWhen").textContent = viewDaily === today
-    ? new Date().toLocaleDateString(undefined,{weekday:"long", month:"long", day:"numeric"})
-    : "From the archive.";
+  const d = progress.daily[today];
+  $("dailyNo").textContent = "Puzzle #" + today;
+  $("dailyWhen").textContent = new Date().toLocaleDateString(undefined,
+    {weekday:"long", month:"long", day:"numeric"});
   $("dailySt").innerHTML = d
     ? "<b>✓ Solved</b> in " + fmtTime(d.t) + (d.h ? " · " + d.h + " hint" + (d.h>1?"s":"") : "")
-    : (LS.get(stateKey("daily", viewDaily), null) ? "In progress" : "Not yet solved");
+    : (LS.get(stateKey("daily", today), null) ? "In progress" : "Not yet solved");
   $("cardDaily").classList.toggle("done", !!d);
   $("dailyCta").textContent = d ? "Play again" : "Play";
-  $("archiveNum").value = viewDaily;
-  $("archiveNum").max = today;
 
   $("endlessNo").textContent = "Puzzle E" + progress.endlessAt;
-  $("endlessSt").textContent = progress.endlessDone
-    ? progress.endlessDone + " solved so far"
-    : "Play as many as you like";
+  const n = endlessSolved();
+  $("endlessSt").textContent = n ? n + " solved so far" : "Play as many as you like";
+}
+
+/* ---------- archive: every puzzle ever offered ---------- */
+let archiveTab = "daily";
+function renderArchive(){
+  const daily = archiveTab === "daily";
+  const max = daily ? todayNumber() : Math.max(1, progress.endlessAt);
+  const done = daily ? progress.daily : progress.endless;
+
+  let solved = 0;
+  const frag = document.createDocumentFragment();
+  for (let n = max; n >= 1; n--){
+    const rec = done[n];
+    if (rec) solved++;
+    const started = !rec && !!LS.get(stateKey(archiveTab, n), null);
+    const b = document.createElement("button");
+    b.className = "chip" + (rec ? " solved" : (started ? " part" : ""));
+    b.innerHTML = (daily ? "#" : "E") + n +
+      "<i>" + (rec ? "✓ " + fmtTime(rec.t) : (started ? "resume" : "play")) + "</i>";
+    b.onclick = () => openPuzzle(archiveTab, n, "archive");
+    frag.appendChild(b);
+  }
+  const wrap = $("chips");
+  wrap.innerHTML = "";
+  wrap.appendChild(frag);
+  $("archiveCount").textContent = solved + " of " + max + " solved";
+  for (const t of document.querySelectorAll(".tab"))
+    t.classList.toggle("on", t.dataset.tab === archiveTab);
 }
 
 /* ---------- open a puzzle ---------- */
-function openPuzzle(mode, num){
+function openPuzzle(mode, num, from){
+  openedFrom = from || "home";
   $("viewHome").classList.add("hide");
+  $("viewArchive").classList.add("hide");
   $("viewGame").classList.remove("hide");
   document.querySelector("footer").classList.add("hide");   // give the board the room
   $("btnSkip").classList.toggle("hide", mode !== "endless");
@@ -853,7 +908,8 @@ function checkWin(){
       progress.lastDay = today;
     }
   } else {
-    progress.endlessDone = (progress.endlessDone||0) + 1;
+    const prev = progress.endless[P.num];
+    if (!prev || total < prev.t) progress.endless[P.num] = {t:total, h:hintsUsed};
     if (P.num >= progress.endlessAt) progress.endlessAt = P.num + 1;
   }
   saveProgress();
@@ -876,7 +932,7 @@ function showWin(total){
     '<div class="stat">' +
       '<div><div class="k">' + fmtTime(total) + '</div><div class="l">Time</div></div>' +
       '<div><div class="k">' + hintsUsed + '</div><div class="l">Hints</div></div>' +
-      '<div><div class="k">' + (isDaily ? (progress.streak||0) : (progress.endlessDone||0)) + '</div>' +
+      '<div><div class="k">' + (isDaily ? (progress.streak||0) : endlessSolved()) + '</div>' +
         '<div class="l">' + (isDaily ? "Day streak" : "Endless solved") + '</div></div>' +
     '</div>' +
     '<div class="row">' +
@@ -914,15 +970,31 @@ function goHome(){
   clearInterval(tickHandle);
   saveState();
   $("viewGame").classList.add("hide");
+  $("viewArchive").classList.add("hide");
   $("viewHome").classList.remove("hide");
   document.querySelector("footer").classList.remove("hide");
   renderHome();
 }
+function showArchive(){
+  clearInterval(tickHandle);
+  saveState();
+  $("viewGame").classList.add("hide");
+  $("viewHome").classList.add("hide");
+  $("viewArchive").classList.remove("hide");
+  document.querySelector("footer").classList.remove("hide");
+  renderArchive();
+}
+/* leaving a puzzle returns you wherever you opened it from */
+function goBack(){ openedFrom === "archive" ? showArchive() : goHome(); }
 
 /* ---------- wiring ---------- */
-$("cardDaily").onclick = () => openPuzzle("daily", viewDaily);
+$("cardDaily").onclick = () => openPuzzle("daily", todayNumber());
 $("cardEndless").onclick = () => openPuzzle("endless", progress.endlessAt);
-$("btnBack").onclick = goHome;
+$("btnArchive").onclick = showArchive;
+$("btnArchiveBack").onclick = goHome;
+for (const t of document.querySelectorAll(".tab"))
+  t.onclick = () => { archiveTab = t.dataset.tab; renderArchive(); };
+$("btnBack").onclick = goBack;
 $("btnUndo").onclick = undo;
 $("btnClear").onclick = clearAll;
 $("btnHint").onclick = hint;
@@ -933,11 +1005,6 @@ $("btnSkip").onclick = () => {
   progress.endlessAt = next; saveProgress();
   openPuzzle("endless", next);
 };
-$("btnGo").onclick = () => {
-  viewDaily = Math.max(1, Math.min(todayNumber(), parseInt($("archiveNum").value||"1",10) || 1));
-  renderHome();
-};
-$("btnToday").onclick = () => { viewDaily = todayNumber(); renderHome(); };
 
 $("btnHelp").onclick = () => modal(
   '<h3>How to play</h3>' +
@@ -953,9 +1020,9 @@ $("btnHelp").onclick = () => modal(
     '<div class="c c0">2</div><div class="d"></div><div class="d"></div><div class="d"></div>' +
     '<div class="c c0"></div><div class="d"></div><div class="d">6</div><div class="d"></div>' +
   '</div>' +
-  '<p>Drag across the grid to draw a box. Tap an existing box to take it away. Boxes that cannot be right are shaded red.</p>' +
+  '<p>Drag across the grid to draw a box. Tap an existing box to take it away. A box of the right size fills in solid with rounded corners; one that is still the wrong size stays faint, with the grid showing through.</p>' +
   '<p>Every grid is 9×11 and pitched at about the same difficulty — always solvable by reasoning alone, never by guessing.</p>' +
-  '<p><b>Daily</b> gives everyone the same puzzle, in the same order, each day; puzzle #1 was 1 January 2026. <b>Endless</b> keeps handing you new ones.</p>' +
+  '<p><b>Daily</b> gives everyone the same puzzle, in the same order, each day; puzzle #1 was 1 January 2026. <b>Endless</b> keeps handing you new ones. Every puzzle from either, going all the way back, is in the archive.</p>' +
   '<div class="row"><button class="btn primary" data-act="ok">Got it</button></div>',
   (a, close) => close()
 );
@@ -967,7 +1034,7 @@ $("btnStats").onclick = () => {
     '<div class="stat">' +
       '<div><div class="k">' + days + '</div><div class="l">Daily solved</div></div>' +
       '<div><div class="k">' + (progress.streak||0) + '</div><div class="l">Day streak</div></div>' +
-      '<div><div class="k">' + (progress.endlessDone||0) + '</div><div class="l">Endless solved</div></div>' +
+      '<div><div class="k">' + endlessSolved() + '</div><div class="l">Endless solved</div></div>' +
     '</div>' +
     '<p>Best time without hints: <b>' + (progress.best ? fmtTime(progress.best) : "—") + '</b></p>' +
     '<div class="row">' +

@@ -10,14 +10,16 @@ Numbers sit on a 9×11 grid. Cut the whole grid into rectangular boxes so that:
 - that number is **how many squares the box covers** (a 4 might be 2×2, 1×4 or 4×1);
 - boxes never overlap, and no square is left outside a box.
 
-Drag across the grid to draw a box — the running count of squares covered shows as you drag, and turns green the moment it matches the number inside. Tap a box to take it away.
+Drag across the grid to draw a box — the running count of squares covered shows as you drag. Tap a box to take it away.
 
-A finished box fills as a solid slab of colour. A box whose size doesn't match its number stays unfilled and is shaded red instead. Numbers are never smaller than 2.
+Every box gets its own colour, fixed the moment you draw it. A box of the right size fills in solid with rounded corners; one that is still the wrong size wears the same colour faintly, with the grid showing through. Numbers are never smaller than 2.
 
 ## Two modes
 
-- **Daily** — one puzzle per calendar day, the same for everyone, in the same order. Puzzle #1 was 1 January 2026. Past days are replayable from the archive box.
+- **Daily** — one puzzle per calendar day, the same for everyone, in the same order. Puzzle #1 was 1 January 2026.
 - **Endless** — an unlimited stream (`E1`, `E2`, `E3`…), with a *New grid* button to skip one.
+
+An in-app **archive** lists every puzzle from both streams, back to the beginning, marking which are solved (with your time) and which are part-finished.
 
 Progress, times, and day streaks are kept in `localStorage`. Nothing leaves the device.
 
