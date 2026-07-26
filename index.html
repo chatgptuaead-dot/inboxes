@@ -529,6 +529,52 @@ const endlessSolved = () => Object.keys(progress.endless).length;
 const saveProgress = () => LS.set(PROGRESS_KEY, progress);
 const stateKey = (mode, num) => "inboxes.v2.state." + mode + "." + num;
 
+/* ---------- recover solves that were never recorded ----------
+   Endless results used to be kept only as a running total, so a puzzle
+   finished back then left a completed board behind with no entry to show
+   for it — the archive read that as "resume". Anything whose saved board
+   genuinely solves its puzzle is credited back on load. */
+function boardSolves(mode, num, saved){
+  if (!saved || !Array.isArray(saved.boxes) || !saved.boxes.length) return false;
+  // cheap reject first: a finished board covers every square exactly once
+  let area = 0;
+  for (const b of saved.boxes) area += b.w*b.h;
+  if (area !== GRID.w*GRID.h) return false;
+
+  const Q = generate(mode, num);
+  if (!Q) return false;
+  const seen = new Uint8Array(Q.w*Q.h);
+  for (const b of saved.boxes){
+    if (b.r < 0 || b.c < 0 || b.r+b.h > Q.h || b.c+b.w > Q.w) return false;
+    let clues = 0, val = -1;
+    for (let r=b.r;r<b.r+b.h;r++) for (let c=b.c;c<b.c+b.w;c++){
+      const i = r*Q.w+c;
+      if (seen[i]) return false;                 // boxes overlap
+      seen[i] = 1;
+      const ci = Q.clueAt[i];
+      if (ci !== -1){ clues++; val = Q.clues[ci].val; }
+    }
+    if (clues !== 1 || val !== b.w*b.h) return false;
+  }
+  return true;                                   // areas already add to the grid
+}
+function reconcile(){
+  let changed = false;
+  for (let i=0;i<localStorage.length;i++){
+    const m = (localStorage.key(i) || "").match(/^inboxes\.v2\.state\.(daily|endless)\.(\d+)$/);
+    if (!m) continue;
+    const mode = m[1], num = +m[2];
+    const book = mode === "daily" ? progress.daily : progress.endless;
+    if (book[num]) continue;
+    const saved = LS.get(stateKey(mode, num), null);
+    if (!boardSolves(mode, num, saved)) continue;
+    book[num] = {t: saved.elapsed || 0, h: saved.hints || 0};
+    if (mode === "endless" && num >= progress.endlessAt) progress.endlessAt = num + 1;
+    changed = true;
+  }
+  if (changed) saveProgress();
+}
+
 /* ---------- app state ---------- */
 let P = null;
 let region = null;
@@ -1065,6 +1111,7 @@ darkQuery.addEventListener("change", () => {
 });
 window.addEventListener("beforeunload", saveState);
 
+reconcile();
 renderHome();
 if (!LS.get("inboxes.v2.seen", false)){
   LS.set("inboxes.v2.seen", true);
