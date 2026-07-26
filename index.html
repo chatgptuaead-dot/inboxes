@@ -201,7 +201,7 @@
 <main>
   <section id="viewHome">
     <p class="kicker">Daily logic</p>
-    <p class="lede">Numbers sit on a 9×11 grid. Draw a parcel around each one so that the parcel holds exactly that many squares — and keep going until every square belongs to a parcel.</p>
+    <p class="lede">Numbers sit on a 9×11 grid. Draw a box around each one so that the box holds exactly that many squares — and keep going until every square is inside a box.</p>
 
     <div class="modes">
       <button class="mode" id="cardDaily">
@@ -260,7 +260,7 @@
       <button class="tool hide" id="btnSkip">⤳ New grid</button>
     </div>
 
-    <p class="hint">Drag across the grid to draw a parcel. Tap a parcel to remove it.<br><b>Z</b> undoes · <b>H</b> gives a hint.</p>
+    <p class="hint">Drag across the grid to draw a box. Tap a box to remove it.<br><b>Z</b> undoes · <b>H</b> gives a hint.</p>
   </section>
 </main>
 
@@ -271,8 +271,8 @@
 "use strict";
 /* ==========================================================================
    PARCELS
-   Divide a 9x11 grid into rectangular parcels. Every parcel holds exactly
-   one number, and that number is how many squares the parcel covers.
+   Divide a 9x11 grid into rectangular boxes. Every box holds exactly one
+   number, and that number is how many squares the box covers.
 
    Note: the seed prefix and localStorage keys below still read "inboxes",
    the game's former name. They are deliberately left alone — the seed
@@ -1095,11 +1095,11 @@ $("btnSkip").onclick = () => {
 
 $("btnHelp").onclick = () => modal(
   '<h3>How to play</h3>' +
-  '<p>Cut the whole grid into rectangular parcels.</p>' +
+  '<p>Cut the whole grid into rectangular boxes.</p>' +
   '<ul>' +
-    '<li>Every parcel contains <b>exactly one number</b>.</li>' +
-    '<li>The number says <b>how many squares</b> that parcel covers — a 4 might be 2×2, 1×4 or 4×1.</li>' +
-    '<li>Parcels never overlap, and no square is left outside one.</li>' +
+    '<li>Every box contains <b>exactly one number</b>.</li>' +
+    '<li>The number says <b>how many squares</b> that box covers — a 4 might be 2×2, 1×4 or 4×1.</li>' +
+    '<li>Boxes never overlap, and no square is left outside a box.</li>' +
   '</ul>' +
   '<div class="demo">' +
     '<div class="a r0 c0">4</div><div class="a r0"></div><div class="b r0"></div><div class="b r0">4</div>' +
@@ -1107,7 +1107,7 @@ $("btnHelp").onclick = () => modal(
     '<div class="c c0">2</div><div class="d"></div><div class="d"></div><div class="d"></div>' +
     '<div class="c c0"></div><div class="d"></div><div class="d">6</div><div class="d"></div>' +
   '</div>' +
-  '<p>Drag across the grid to draw a parcel. Tap an existing parcel to take it away. A parcel of the right size fills in solid with rounded corners; one that is still the wrong size stays faint, with the grid showing through.</p>' +
+  '<p>Drag across the grid to draw a box. Tap an existing box to take it away. A box of the right size fills in solid with rounded corners; one that is still the wrong size stays faint, with the grid showing through.</p>' +
   '<p>Every grid is 9×11 and pitched at about the same difficulty — always solvable by reasoning alone, never by guessing.</p>' +
   '<p><b>Daily</b> gives everyone the same puzzle, in the same order, each day; puzzle #1 was 1 January 2026. <b>Endless</b> keeps handing you new ones. Every puzzle from either, going all the way back, is in the archive.</p>' +
   '<div class="row"><button class="btn primary" data-act="ok">Got it</button></div>',

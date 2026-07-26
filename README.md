@@ -4,15 +4,15 @@ A daily rectangle-logic puzzle for the browser. One self-contained HTML file, no
 
 ## The rules
 
-Numbers sit on a 9×11 grid. Cut the whole grid into rectangular parcels so that:
+Numbers sit on a 9×11 grid. Cut the whole grid into rectangular boxes so that:
 
-- every parcel contains **exactly one number**;
-- that number is **how many squares the parcel covers** (a 4 might be 2×2, 1×4 or 4×1);
-- parcels never overlap, and no square is left outside a parcel.
+- every box contains **exactly one number**;
+- that number is **how many squares the box covers** (a 4 might be 2×2, 1×4 or 4×1);
+- boxes never overlap, and no square is left outside a box.
 
-Drag across the grid to draw a parcel — the running count of squares covered shows as you drag. Tap a parcel to take it away.
+Drag across the grid to draw a box — the running count of squares covered shows as you drag. Tap a box to take it away.
 
-Every parcel gets its own colour, fixed the moment you draw it. A parcel of the right size fills in solid with rounded corners; one that is still the wrong size wears the same colour faintly, with the grid showing through. Numbers are never smaller than 2.
+Every box gets its own colour, fixed the moment you draw it. A box of the right size fills in solid with rounded corners; one that is still the wrong size wears the same colour faintly, with the grid showing through. Numbers are never smaller than 2.
 
 ## Two modes
 
@@ -31,18 +31,18 @@ Every puzzle is derived purely from its seed string — `inboxes-v2|d206`, `inbo
 
 Generation works backwards from a finished tiling:
 
-1. **Tile the grid.** Each new rectangle is anchored at the first uncovered square in reading order, which guarantees that square is its top-left corner — so the tiling can never strand an unfillable hole. Larger parcels are weighted more heavily, and single squares are refused outright: a layout that would force one is thrown away and re-rolled, so no puzzle ever contains a give-away `1`.
+1. **Tile the grid.** Each new rectangle is anchored at the first uncovered square in reading order, which guarantees that square is its top-left corner — so the tiling can never strand an unfillable hole. Larger boxes are weighted more heavily, and single squares are refused outright: a layout that would force one is thrown away and re-rolled, so no puzzle ever contains a give-away `1`.
 2. **Drop a number** at a random square inside each rectangle.
 3. **Rate the result** with a solver that mimics human reasoning, using only two forced-move rules:
-   - *naked* — a number has just one parcel left that fits;
-   - *hidden* — a square only one remaining parcel can still reach.
+   - *naked* — a number has just one box left that fits;
+   - *hidden* — a square only one remaining box can still reach.
 
 A candidate is accepted only if it clears all three difficulty gates:
 
 | Gate | Value | Why |
 | --- | --- | --- |
 | Solvable by those two rules alone | required | no puzzle ever needs guessing, and the answer is provably unique |
-| Parcel count | 15–19 | keeps the workload steady |
+| Box count | 15–19 | keeps the workload steady |
 | Share of *hidden* deductions | 0.12–0.40 | the difficulty dial, held in a narrow band |
 
 Rejected candidates are re-rolled from the same seeded stream, so the filter stays deterministic. Typical acceptance takes ~6 attempts; a puzzle generates in about 1 ms.
@@ -52,8 +52,8 @@ Rejected candidates are re-rolled from the same seeded stream, so the filter sta
 The generator was checked over 300 puzzles (150 daily, 150 endless) for:
 
 - correct 9×11 dimensions and clue values summing to 99;
-- full coverage with no overlapping parcels;
-- each clue lying inside its own parcel, with value equal to its area;
+- full coverage with no overlapping boxes;
+- each clue lying inside its own box, with value equal to its area;
 - **exactly one solution**, confirmed by an exhaustive counting solver;
 - identical output when regenerated from the same seed;
 - all 300 puzzles distinct, with no daily/endless collisions.
