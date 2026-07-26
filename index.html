@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Inboxes — a daily rectangle puzzle</title>
+<title>Parcels — a daily rectangle puzzle</title>
 <style>
   :root{
     --red:#E3120B;
@@ -192,7 +192,7 @@
 <header>
   <div class="brand">
     <div class="mark"><i></i><i></i><i></i></div>
-    <h1>Inboxes</h1>
+    <h1>Parcels</h1>
   </div>
   <button class="iconbtn" id="btnHelp" title="How to play">?</button>
   <button class="iconbtn" id="btnStats" title="Statistics">▤</button>
@@ -201,7 +201,7 @@
 <main>
   <section id="viewHome">
     <p class="kicker">Daily logic</p>
-    <p class="lede">Numbers sit on a 9×11 grid. Draw a box around each one so that the box holds exactly that many squares — and keep going until every square is inside a box.</p>
+    <p class="lede">Numbers sit on a 9×11 grid. Draw a parcel around each one so that the parcel holds exactly that many squares — and keep going until every square belongs to a parcel.</p>
 
     <div class="modes">
       <button class="mode" id="cardDaily">
@@ -260,7 +260,7 @@
       <button class="tool hide" id="btnSkip">⤳ New grid</button>
     </div>
 
-    <p class="hint">Drag across the grid to draw a box. Tap a box to remove it.<br><b>Z</b> undoes · <b>H</b> gives a hint.</p>
+    <p class="hint">Drag across the grid to draw a parcel. Tap a parcel to remove it.<br><b>Z</b> undoes · <b>H</b> gives a hint.</p>
   </section>
 </main>
 
@@ -270,9 +270,13 @@
 <script>
 "use strict";
 /* ==========================================================================
-   INBOXES
-   Divide a 9x11 grid into rectangular boxes. Every box holds exactly one
-   number, and that number is how many squares the box covers.
+   PARCELS
+   Divide a 9x11 grid into rectangular parcels. Every parcel holds exactly
+   one number, and that number is how many squares the parcel covers.
+
+   Note: the seed prefix and localStorage keys below still read "inboxes",
+   the game's former name. They are deliberately left alone — the seed
+   decides every puzzle's layout, and the keys hold players' history.
 
    Every puzzle is 9x11 and tuned to roughly the same difficulty: always
    solvable by pure logic, never by guessing.
@@ -999,14 +1003,14 @@ function checkWin(){
 function showWin(total){
   const isDaily = P.mode === "daily";
   const share = isDaily
-    ? "Inboxes #" + P.num + " · 9×11\n⏱ " + fmtTime(total) +
+    ? "Parcels #" + P.num + " · 9×11\n⏱ " + fmtTime(total) +
       (hintsUsed ? " · " + hintsUsed + " hint" + (hintsUsed>1?"s":"") : " · no hints") +
       (progress.streak > 1 ? "\n🔥 " + progress.streak + " day streak" : "")
-    : "Inboxes Endless E" + P.num + " · 9×11\n⏱ " + fmtTime(total) +
+    : "Parcels Endless E" + P.num + " · 9×11\n⏱ " + fmtTime(total) +
       (hintsUsed ? " · " + hintsUsed + " hint" + (hintsUsed>1?"s":"") : " · no hints");
 
   modal(
-    '<h3>Boxed in</h3>' +
+    '<h3>All parcelled out</h3>' +
     '<p>' + (isDaily ? "Daily puzzle #" + P.num : "Endless puzzle E" + P.num) + ' — every square accounted for.</p>' +
     '<div class="stat">' +
       '<div><div class="k">' + fmtTime(total) + '</div><div class="l">Time</div></div>' +
@@ -1091,11 +1095,11 @@ $("btnSkip").onclick = () => {
 
 $("btnHelp").onclick = () => modal(
   '<h3>How to play</h3>' +
-  '<p>Cut the whole grid into rectangular boxes.</p>' +
+  '<p>Cut the whole grid into rectangular parcels.</p>' +
   '<ul>' +
-    '<li>Every box contains <b>exactly one number</b>.</li>' +
-    '<li>The number says <b>how many squares</b> that box covers — a 4 might be 2×2, 1×4 or 4×1.</li>' +
-    '<li>Boxes never overlap, and no square is left outside a box.</li>' +
+    '<li>Every parcel contains <b>exactly one number</b>.</li>' +
+    '<li>The number says <b>how many squares</b> that parcel covers — a 4 might be 2×2, 1×4 or 4×1.</li>' +
+    '<li>Parcels never overlap, and no square is left outside one.</li>' +
   '</ul>' +
   '<div class="demo">' +
     '<div class="a r0 c0">4</div><div class="a r0"></div><div class="b r0"></div><div class="b r0">4</div>' +
@@ -1103,7 +1107,7 @@ $("btnHelp").onclick = () => modal(
     '<div class="c c0">2</div><div class="d"></div><div class="d"></div><div class="d"></div>' +
     '<div class="c c0"></div><div class="d"></div><div class="d">6</div><div class="d"></div>' +
   '</div>' +
-  '<p>Drag across the grid to draw a box. Tap an existing box to take it away. A box of the right size fills in solid with rounded corners; one that is still the wrong size stays faint, with the grid showing through.</p>' +
+  '<p>Drag across the grid to draw a parcel. Tap an existing parcel to take it away. A parcel of the right size fills in solid with rounded corners; one that is still the wrong size stays faint, with the grid showing through.</p>' +
   '<p>Every grid is 9×11 and pitched at about the same difficulty — always solvable by reasoning alone, never by guessing.</p>' +
   '<p><b>Daily</b> gives everyone the same puzzle, in the same order, each day; puzzle #1 was 1 January 2026. <b>Endless</b> keeps handing you new ones. Every puzzle from either, going all the way back, is in the archive.</p>' +
   '<div class="row"><button class="btn primary" data-act="ok">Got it</button></div>',
