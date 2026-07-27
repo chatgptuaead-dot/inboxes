@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Parcels Kids — a daily rectangle puzzle</title>
+<style>
+  :root{
+    --red:#E3120B;
+    --paper:#FBF7F2;
+    --card:#FFFFFF;
+    --ink:#121212;
+    --ink-2:#5A5A5A;
+    --ink-3:#8E8E8E;
+    --soft:#DCD6CC;
+    --hard:#121212;
+    --good:#0B7A4B;
+    --shadow:0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:"Georgia","Times New Roman",serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#151515; --card:#1E1E1E; --ink:#F2EFEA; --ink-2:#A9A49C; --ink-3:#7C7770;
+      --soft:#3A3A3A; --hard:#EDE9E3;
+      --good:#4ED397;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
+    }
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper); color:var(--ink); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+    display:flex; flex-direction:column; align-items:center; min-height:100vh;
+  }
+  button{font-family:inherit;color:inherit;cursor:pointer}
+  .hide{display:none !important}
+
+  header{width:100%;max-width:740px;padding:14px 16px 10px;
+    display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--soft)}
+  .brand{display:flex;align-items:center;gap:9px;margin-right:auto}
+  .mark{width:26px;height:26px;border:2px solid var(--red);display:grid;
+    grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+  .mark i{border-right:2px solid var(--red);border-bottom:2px solid var(--red)}
+  .mark i:nth-child(2){border-right:none}
+  .mark i:nth-child(3){grid-column:1/3;border:none}
+  h1{font-family:var(--serif);font-size:21px;margin:0;font-weight:700}
+  .iconbtn{background:transparent;border:1px solid var(--soft);border-radius:999px;
+    width:34px;height:34px;display:grid;place-items:center;font-size:15px}
+  .iconbtn:hover{border-color:var(--ink-3)}
+
+  main{width:100%;max-width:740px;padding:16px;flex:1}
+  .kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);font-weight:700;margin:0 0 6px}
+  .lede{font-family:var(--serif);font-size:15px;line-height:1.55;color:var(--ink-2);margin:0 0 18px}
+
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:520px){ .modes{grid-template-columns:1fr} }
+  .mode{background:var(--card);border:1px solid var(--soft);border-radius:12px;padding:16px;
+    display:flex;flex-direction:column;gap:4px;text-align:left;
+    transition:transform .08s ease,border-color .15s ease}
+  .mode:hover{transform:translateY(-1px);border-color:var(--ink-3)}
+  .mode .tag{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--red);font-weight:700}
+  .mode .no{font-family:var(--serif);font-size:24px;font-weight:700;line-height:1.15}
+  .mode .when{font-size:12.5px;color:var(--ink-2)}
+  .mode .st{font-size:12.5px;color:var(--ink-3);margin-top:6px}
+  .mode .st b{color:var(--good)}
+  .mode.done{border-color:var(--good)}
+  .mode .cta{margin-top:12px;background:var(--red);color:#fff;border:none;border-radius:8px;
+    padding:9px 0;font-size:13px;font-weight:700;text-align:center}
+  .mode .cta.ghost{background:transparent;color:var(--ink);border:1px solid var(--soft)}
+
+  .archive{margin-top:18px;padding-top:14px;border-top:1px solid var(--soft);
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
+
+  .tabs{display:flex;gap:8px;margin:2px 0 14px}
+  .tab{border:1px solid var(--soft);background:var(--card);border-radius:999px;
+    padding:7px 17px;font-size:13px;font-weight:600}
+  .tab:hover{border-color:var(--ink-3)}
+  .tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:8px}
+  .chip{position:relative;border:1px solid var(--soft);background:var(--card);border-radius:9px}
+  .chip:hover{border-color:var(--ink-3)}
+  .chipmain{width:100%;background:none;border:none;border-radius:9px;
+    padding:9px 6px;font-family:var(--serif);font-weight:700;font-size:15px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.15}
+  /* only the number needs to clear the replay button, and padding both
+     sides keeps it centred; the date and status get the full width */
+  .chip .no{padding:0 20px}
+  .chip em{font-family:var(--sans);font-style:normal;font-size:9.5px;font-weight:600;
+    color:var(--ink-3);letter-spacing:.01em;white-space:nowrap}
+  .chip i{font-family:var(--sans);font-style:normal;font-size:10px;font-weight:600;
+    color:var(--ink-3);letter-spacing:.02em}
+  .chip.solved{border-color:var(--good)}
+  .chip.solved i{color:var(--good)}
+  .chip.part{border-color:var(--red)}
+  .chip.part i{color:var(--red)}
+  .chipreplay{position:absolute;top:3px;right:3px;width:21px;height:21px;padding:0;
+    border:1px solid var(--soft);border-radius:999px;background:var(--card);
+    font-size:11px;line-height:1;display:grid;place-items:center;color:var(--ink-3)}
+  .chipreplay:hover{border-color:var(--red);color:var(--red)}
+  .btn{border:1px solid var(--soft);background:var(--card);border-radius:8px;
+    padding:7px 13px;font-size:13px;font-weight:600}
+  .btn:hover{border-color:var(--ink-3)}
+  .btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+  .btn.primary:hover{filter:brightness(1.08)}
+
+  .gamebar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .gamebar .back{border:none;background:transparent;font-size:13px;font-weight:600;color:var(--red);padding:4px 0}
+  .meta{margin-left:auto;text-align:right;line-height:1.25}
+  .meta .a{font-size:12.5px;color:var(--ink-2)}
+  .meta .b{font-variant-numeric:tabular-nums;font-size:17px;font-weight:700;font-family:var(--serif)}
+
+  .boardwrap{display:flex;justify-content:center}
+  .board{position:relative;display:grid;background:var(--card);
+    border:2.5px solid var(--hard);touch-action:none;user-select:none}
+  .cell{position:relative;display:grid;place-items:center;
+    border-top:1px solid var(--soft);border-left:1px solid var(--soft);
+    font-family:var(--serif);font-weight:700;color:var(--ink)}
+  .cell.r0{border-top:none}
+  .cell.c0{border-left:none}
+  /* Any placed box, right or wrong, is drawn as one unbroken slab with no
+     outline at all. The fill sits on a pseudo-element so it can be pulled in
+     from the box's outer edges, leaving air between neighbouring boxes. */
+  .cell.tile{border:none}
+  .cell.tile::before{content:"";position:absolute;top:0;right:0;bottom:0;left:0;
+    background:var(--fill)}
+  .cell.tile.gt::before{top:var(--gap)}
+  .cell.tile.gr::before{right:var(--gap)}
+  .cell.tile.gb::before{bottom:var(--gap)}
+  .cell.tile.gl::before{left:var(--gap)}
+  /* still the wrong size: a see-through wash that leaves the grid readable */
+  .cell.tile.bad{border-top:1px solid var(--soft);border-left:1px solid var(--soft)}
+  .cell.tile.bad.r0{border-top:none}
+  .cell.tile.bad.c0{border-left:none}
+  .cell.tile.bad::before{opacity:.3}
+  /* the right number of squares: round the box's outer corners */
+  .cell.tile:not(.bad).gt.gl::before{border-top-left-radius:var(--round)}
+  .cell.tile:not(.bad).gt.gr::before{border-top-right-radius:var(--round)}
+  .cell.tile:not(.bad).gb.gl::before{border-bottom-left-radius:var(--round)}
+  .cell.tile:not(.bad).gb.gr::before{border-bottom-right-radius:var(--round)}
+  .cell .num{pointer-events:none;line-height:1;position:relative;z-index:1}
+  /* the drag preview is just the box-to-be, in the colour it will take */
+  .preview{position:absolute;pointer-events:none;background:var(--pfill);
+    z-index:5;display:grid;place-items:center}
+  .preview.ok{border-radius:var(--round)}
+  .preview span{font-family:var(--serif);font-size:17px;font-weight:700;
+    background:var(--ink);color:var(--paper);min-width:30px;text-align:center;
+    padding:2px 8px;border-radius:999px}
+
+  .tools{display:flex;gap:8px;justify-content:center;margin:12px 0 4px;flex-wrap:wrap}
+  .tool{border:1px solid var(--soft);background:var(--card);border-radius:9px;
+    padding:8px 13px;font-size:12.5px;font-weight:600;display:flex;gap:6px;align-items:center}
+  .tool:hover{border-color:var(--ink-3)}
+  .tool .pill{font-size:10px;background:var(--soft);border-radius:999px;padding:1px 5px;color:var(--ink-2)}
+  .progressline{display:flex;align-items:center;gap:8px;margin:12px auto 0;max-width:440px;
+    font-size:11.5px;color:var(--ink-3)}
+  .progressline .bar{flex:1;height:4px;background:var(--soft);border-radius:2px;overflow:hidden}
+  .progressline .bar span{display:block;height:100%;background:var(--red);transition:width .2s}
+  .hint{text-align:center;font-size:12px;color:var(--ink-3);margin-top:12px;line-height:1.55}
+
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:18px;z-index:50}
+  .modal{background:var(--card);border-radius:14px;box-shadow:var(--shadow);
+    max-width:430px;width:100%;padding:22px;max-height:86vh;overflow:auto}
+  .modal h3{font-family:var(--serif);font-size:22px;margin:0 0 6px}
+  .modal p,.modal li{font-size:14px;line-height:1.6;color:var(--ink-2)}
+  .modal ul{padding-left:18px;margin:8px 0}
+  .modal .row{display:flex;gap:8px;margin-top:16px}
+  .modal .row .btn{flex:1;text-align:center;padding:10px}
+  .stat{display:flex;gap:14px;margin:14px 0;flex-wrap:wrap}
+  .stat div{flex:1;min-width:78px}
+  .stat .k{font-family:var(--serif);font-size:24px;font-weight:700;color:var(--ink)}
+  .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3)}
+  .modal textarea{width:100%;margin-top:8px;padding:9px;border:1px solid var(--soft);
+    border-radius:8px;background:var(--paper);color:var(--ink);resize:vertical;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.4}
+  .demo{display:grid;grid-template-columns:repeat(4,34px);margin:14px auto;
+    border:2.5px solid var(--hard);width:max-content}
+  .demo div{height:34px;display:grid;place-items:center;font-family:var(--serif);
+    font-weight:700;font-size:14px;color:#121212;
+    border-top:1px solid rgba(0,0,0,.10);border-left:1px solid rgba(0,0,0,.10)}
+  .demo div.r0{border-top:none}
+  .demo div.c0{border-left:none}
+  .demo div.a{background:hsl(0 58% 84%)}
+  .demo div.b{background:hsl(137.5 66% 85%)}
+  .demo div.c{background:hsl(275 74% 88%)}
+  .demo div.d{background:hsl(52.5 58% 88%)}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:999px;
+    font-size:13px;font-weight:600;z-index:80;opacity:0;pointer-events:none;transition:opacity .2s}
+  .toast.show{opacity:1}
+  footer{font-size:11px;color:var(--ink-3);padding:18px;text-align:center;max-width:740px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="mark"><i></i><i></i><i></i></div>
+    <h1>Parcels Kids</h1>
+  </div>
+  <button class="iconbtn" id="btnHelp" title="How to play">?</button>
+  <button class="iconbtn" id="btnStats" title="Statistics">▤</button>
+</header>
+
+<main>
+  <section id="viewHome">
+    <p class="kicker">Daily logic</p>
+    <p class="lede">Numbers sit on a 6×6 grid. Draw a box around each one so that the box holds exactly that many squares — and keep going until every square is inside a box.</p>
+
+    <div class="modes">
+      <button class="mode" id="cardDaily">
+        <span class="tag">Daily</span>
+        <span class="no" id="dailyNo">Puzzle #1</span>
+        <span class="when" id="dailyWhen"></span>
+        <span class="st" id="dailySt"></span>
+        <span class="cta" id="dailyCta">Play</span>
+      </button>
+      <button class="mode" id="cardEndless">
+        <span class="tag">Endless</span>
+        <span class="no" id="endlessNo">Puzzle E1</span>
+        <span class="when">A fresh grid whenever you want one.</span>
+        <span class="st" id="endlessSt"></span>
+        <span class="cta ghost">Play</span>
+      </button>
+    </div>
+
+    <div class="archive">
+      <button class="btn" id="btnArchive">Browse every puzzle →</button>
+    </div>
+  </section>
+
+  <section id="viewArchive" class="hide">
+    <div class="gamebar">
+      <button class="back" id="btnArchiveBack">‹ Menu</button>
+      <div class="meta"><div class="a" id="archiveCount"></div></div>
+    </div>
+    <div class="tabs">
+      <button class="tab on" data-tab="daily">Daily</button>
+      <button class="tab" data-tab="endless">Endless</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section id="viewGame" class="hide">
+    <div class="gamebar">
+      <button class="back" id="btnBack">‹ Menu</button>
+      <div class="meta">
+        <div class="a" id="gameSub"></div>
+        <div class="b" id="timer">0:00</div>
+      </div>
+    </div>
+
+    <div class="boardwrap"><div class="board" id="board"></div></div>
+
+    <div class="progressline">
+      <span id="progText">0%</span>
+      <div class="bar"><span id="progBar" style="width:0%"></span></div>
+    </div>
+
+    <div class="tools">
+      <button class="tool" id="btnUndo">↶ Undo</button>
+      <button class="tool" id="btnClear">✕ Clear</button>
+      <button class="tool" id="btnHint">◈ Hint <span class="pill" id="hintCount">0</span></button>
+      <button class="tool hide" id="btnSkip">⤳ New grid</button>
+    </div>
+
+    <p class="hint">Drag across the grid to draw a box. Tap a box to remove it.<br><b>Z</b> undoes · <b>H</b> gives a hint.</p>
+  </section>
+</main>
+
+<footer>An original puzzle for the browser. Everything runs on your device.</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ==========================================================================
+   PARCELS KIDS
+   Divide a 6x6 grid into rectangular boxes. Every box holds exactly one
+   number, and that number is how many squares the box covers.
+
+   The small sibling of Parcels: a 6x6 grid, clue numbers never bigger than
+   6 so they can be counted on fingers, and only puzzles that fall to the
+   simplest rule on its own — no puzzle here ever needs the harder "which
+   box can still reach this square" step, let alone guesswork.
+
+   Its seeds and storage keys are its own, so it shares no puzzles and no
+   progress with the grown-up game even when served from the same address,
+   where localStorage would otherwise be common to both.
+   ========================================================================== */
+
+const GRID = {
+  w: 6,
+  h: 6,
+  maxArea: 6,       // biggest box we ever produce, so clues stay 2-6
+  minBoxes: 8,      // keeps the number of clues, and so the workload, steady
+  maxBoxes: 11
+};
+const EPOCH = new Date(2026, 0, 1);
+
+/* ---------- seeded randomness: identical output on every device ---------- */
+function hashSeed(str){
+  let h = 1779033703 ^ str.length;
+  for (let i=0;i<str.length;i++){
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function(){
+    h = Math.imul(h ^ (h>>>16), 2246822507);
+    h = Math.imul(h ^ (h>>>13), 3266489909);
+    h ^= h>>>16;
+    return h >>> 0;
+  };
+}
+function mulberry32(a){
+  return function(){
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a>>>15), 1 | a);
+    t = (t + Math.imul(t ^ (t>>>7), 61 | t)) ^ t;
+    return ((t ^ (t>>>14)) >>> 0) / 4294967296;
+  };
+}
+function makeRng(seedStr){
+  const s = hashSeed(seedStr);
+  s();
+  return mulberry32(s());
+}
+function todayNumber(){
+  const n = new Date();
+  const a = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  return Math.floor((a - EPOCH)/86400000) + 1;
+}
+const seedFor = (mode, num) => "parcels-kids-v1|" + (mode === "daily" ? "d" : "e") + num;
+/* daily #1 fell on the epoch, so #n is n-1 days later */
+function dailyDate(n){
+  const d = new Date(EPOCH.getFullYear(), EPOCH.getMonth(), EPOCH.getDate() + n - 1);
+  return d.toLocaleDateString(undefined, {day:"numeric", month:"short", year:"numeric"});
+}
+
+/* ---------- lay the grid out as rectangles ----------
+   Anchoring each new rectangle at the first uncovered square (reading order)
+   guarantees that square is its top-left corner, so the tiling never strands
+   an unfillable hole.                                                       */
+function tile(w, h, rng, maxArea){
+  const N = w*h;
+  const owner = new Int16Array(N).fill(-1);
+  const rects = [];
+  let first = 0;
+  while (true){
+    while (first < N && owner[first] !== -1) first++;
+    if (first >= N) break;
+    const r0 = (first/w)|0, c0 = first%w;
+
+    let maxW = 0;
+    while (c0+maxW < w && owner[r0*w + c0+maxW] === -1) maxW++;
+
+    const cands = [];
+    for (let ww=1; ww<=maxW; ww++){
+      for (let hh=1; r0+hh<=h; hh++){
+        if (ww*hh > maxArea) break;
+        let clear = true;
+        for (let c=c0; c<c0+ww && clear; c++) if (owner[(r0+hh-1)*w + c] !== -1) clear = false;
+        if (!clear) break;
+        cands.push([ww,hh]);
+      }
+    }
+    // never place a single square — a "1" gives the answer away for free
+    const use = cands.filter(([a,b]) => a*b > 1);
+    if (!use.length) return null;   // this layout dead-ends; the caller re-rolls
+    let total = 0;
+    const weights = use.map(([a,b]) => { const t = a*b; total += t; return t; });
+    let pick = rng()*total, k = 0;
+    while (k < use.length-1 && (pick -= weights[k]) > 0) k++;
+    const [ww,hh] = use[k];
+
+    const id = rects.length;
+    for (let r=r0;r<r0+hh;r++) for (let c=c0;c<c0+ww;c++) owner[r*w+c] = id;
+    rects.push({r:r0, c:c0, w:ww, h:hh, area:ww*hh});
+  }
+  return rects;
+}
+
+/* ---------- every box a clue could legally sit in ---------- */
+function candidatesFor(w, h, clueAt, cell, val){
+  const cr = (cell/w)|0, cc = cell%w;
+  const out = [];
+  for (let bh=1; bh<=val; bh++){
+    if (val % bh) continue;
+    const bw = val/bh;
+    if (bw > w || bh > h) continue;
+    for (let r=Math.max(0, cr-bh+1); r<=Math.min(cr, h-bh); r++){
+      for (let c=Math.max(0, cc-bw+1); c<=Math.min(cc, w-bw); c++){
+        let ok = true;
+        const cells = [];
+        for (let rr=r; rr<r+bh && ok; rr++){
+          for (let cc2=c; cc2<c+bw; cc2++){
+            const idx = rr*w+cc2;
+            if (clueAt[idx] !== -1 && idx !== cell){ ok = false; break; }
+            cells.push(idx);
+          }
+        }
+        if (ok) out.push({r, c, w:bw, h:bh, cells});
+      }
+    }
+  }
+  return out;
+}
+
+/* ---------- exact solver: counts solutions, capped ---------- */
+function countSolutions(w, h, clues, cands, cap, budget){
+  const N = w*h;
+  const occ = new Uint8Array(N);
+  const done = new Uint8Array(clues.length);
+  const cover = new Int32Array(N);
+  let found = 0, nodes = 0, aborted = false;
+
+  function rec(placed){
+    if (found >= cap || aborted) return;
+    if (placed === clues.length){ found++; return; }
+    if (++nodes > budget){ aborted = true; return; }
+
+    cover.fill(0);
+    let best = -1, bestList = null, bestCount = Infinity;
+    for (let i=0;i<clues.length;i++){
+      if (done[i]) continue;
+      const list = [];
+      for (const cd of cands[i]){
+        let free = true;
+        for (const x of cd.cells) if (occ[x]){ free = false; break; }
+        if (!free) continue;
+        list.push(cd);
+        for (const x of cd.cells) cover[x]++;
+      }
+      if (!list.length) return;
+      if (list.length < bestCount){ bestCount = list.length; best = i; bestList = list; }
+    }
+    for (let x=0;x<N;x++) if (!occ[x] && !cover[x]) return;
+
+    done[best] = 1;
+    for (const cd of bestList){
+      let free = true;
+      for (const x of cd.cells) if (occ[x]){ free = false; break; }
+      if (!free) continue;
+      for (const x of cd.cells) occ[x] = 1;
+      rec(placed+1);
+      for (const x of cd.cells) occ[x] = 0;
+      if (found >= cap || aborted) break;
+    }
+    done[best] = 0;
+  }
+  rec(0);
+  return aborted ? -1 : found;
+}
+
+/* ---------- human-style solver ----------
+   Makes only forced moves, using two rules:
+     naked  — a clue with just one box left that fits
+     hidden — a square only one remaining box can still reach
+   If it finishes, the puzzle needs no guesswork and the answer is unique.
+   The share of hidden moves is what we use as the difficulty dial.        */
+function rateByLogic(w, h, clues, cands){
+  const N = w*h;
+  const occ = new Uint8Array(N);
+  const done = new Uint8Array(clues.length);
+  let placed = 0, hidden = 0;
+
+  while (placed < clues.length){
+    const cover = new Int32Array(N);
+    const coverBy = new Array(N).fill(null);
+    const lists = new Array(clues.length).fill(null);
+
+    for (let i=0;i<clues.length;i++){
+      if (done[i]) continue;
+      const list = [];
+      for (const cd of cands[i]){
+        let free = true;
+        for (const x of cd.cells) if (occ[x]){ free = false; break; }
+        if (!free) continue;
+        list.push(cd);
+        for (const x of cd.cells){ cover[x]++; coverBy[x] = {i, cd}; }
+      }
+      if (!list.length) return {solved:false, hidden};
+      lists[i] = list;
+    }
+
+    let move = null;
+    for (let i=0;i<clues.length && !move;i++)
+      if (!done[i] && lists[i].length === 1) move = {i, cd:lists[i][0], hidden:false};
+    if (!move){
+      for (let x=0;x<N && !move;x++)
+        if (!occ[x] && cover[x] === 1) move = {i:coverBy[x].i, cd:coverBy[x].cd, hidden:true};
+    }
+    if (!move) return {solved:false, hidden};
+
+    if (move.hidden) hidden++;
+    for (const x of move.cd.cells) occ[x] = 1;
+    done[move.i] = 1;
+    placed++;
+  }
+  return {solved:true, hidden};
+}
+
+/* ---------- generate one puzzle ---------- */
+function generate(mode, num){
+  const w = GRID.w, h = GRID.h, N = w*h;
+  const rng = makeRng(seedFor(mode, num));
+  let relaxed = null;   // logically solvable, but outside the difficulty band
+
+  for (let attempt=0; attempt<600; attempt++){
+    const rects = tile(w, h, rng, GRID.maxArea);
+    if (!rects) continue;
+    if (rects.length < GRID.minBoxes || rects.length > GRID.maxBoxes) continue;
+
+    const clueAt = new Int16Array(N).fill(-1);
+    const clues = [];
+    for (const rc of rects){
+      const off = Math.floor(rng()*rc.area);
+      const cell = (rc.r + ((off/rc.w)|0))*w + (rc.c + off%rc.w);
+      clueAt[cell] = clues.length;
+      clues.push({cell, val:rc.area, rect:rc});
+    }
+
+    const cands = clues.map(cl => candidatesFor(w, h, clueAt, cl.cell, cl.val));
+    if (cands.some(list => !list.length)) continue;
+
+    const rating = rateByLogic(w, h, clues, cands);
+    if (!rating.solved) continue;   // would need guesswork — reject
+
+    const puzzle = {w, h, clues, clueAt, cands, rects, mode, num};
+    // the kind we want: solved by "this number has only one box left that
+    // fits", over and over, with no harder step anywhere
+    if (rating.hidden === 0) return puzzle;
+    if (!relaxed) relaxed = puzzle;
+  }
+  return relaxed;
+}
+
+/* ---------- storage ---------- */
+const LS = {
+  get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+const PROGRESS_KEY = "parcels.kids.v1.progress";
+const blankProgress = () => ({daily:{}, endless:{}, endlessAt:1, streak:0, lastDay:0, best:0});
+let progress = Object.assign(blankProgress(), LS.get(PROGRESS_KEY, {}));
+progress.daily = progress.daily || {};
+progress.endless = progress.endless || {};
+const endlessSolved = () => Object.keys(progress.endless).length;
+const saveProgress = () => LS.set(PROGRESS_KEY, progress);
+const stateKey = (mode, num) => "parcels.kids.v1.state." + mode + "." + num;
+
+/* ---------- recover solves that were never recorded ----------
+   Endless results used to be kept only as a running total, so a puzzle
+   finished back then left a completed board behind with no entry to show
+   for it — the archive read that as "resume". Anything whose saved board
+   genuinely solves its puzzle is credited back on load. */
+function boardSolves(mode, num, saved){
+  if (!saved || !Array.isArray(saved.boxes) || !saved.boxes.length) return false;
+  // cheap reject first: a finished board covers every square exactly once
+  let area = 0;
+  for (const b of saved.boxes) area += b.w*b.h;
+  if (area !== GRID.w*GRID.h) return false;
+
+  const Q = generate(mode, num);
+  if (!Q) return false;
+  const seen = new Uint8Array(Q.w*Q.h);
+  for (const b of saved.boxes){
+    if (b.r < 0 || b.c < 0 || b.r+b.h > Q.h || b.c+b.w > Q.w) return false;
+    let clues = 0, val = -1;
+    for (let r=b.r;r<b.r+b.h;r++) for (let c=b.c;c<b.c+b.w;c++){
+      const i = r*Q.w+c;
+      if (seen[i]) return false;                 // boxes overlap
+      seen[i] = 1;
+      const ci = Q.clueAt[i];
+      if (ci !== -1){ clues++; val = Q.clues[ci].val; }
+    }
+    if (clues !== 1 || val !== b.w*b.h) return false;
+  }
+  return true;                                   // areas already add to the grid
+}
+function reconcile(){
+  let changed = false;
+  for (let i=0;i<localStorage.length;i++){
+    const m = (localStorage.key(i) || "").match(/^parcels\.kids\.v1\.state\.(daily|endless)\.(\d+)$/);
+    if (!m) continue;
+    const mode = m[1], num = +m[2];
+    const book = mode === "daily" ? progress.daily : progress.endless;
+    if (book[num]) continue;
+    const saved = LS.get(stateKey(mode, num), null);
+    if (!boardSolves(mode, num, saved)) continue;
+    book[num] = {t: saved.elapsed || 0, h: saved.hints || 0};
+    if (mode === "endless" && num >= progress.endlessAt) progress.endlessAt = num + 1;
+    changed = true;
+  }
+  if (changed) saveProgress();
+}
+
+/* ---------- moving progress between addresses ----------
+   localStorage is tied to the exact origin, so a player who moves to a
+   different URL arrives with nothing. These two carry it across — and
+   double as a way to sync a phone with a laptop. */
+function exportData(){
+  const boards = {};
+  for (let i=0;i<localStorage.length;i++){
+    const m = (localStorage.key(i) || "").match(/^parcels\.kids\.v1\.state\.(daily|endless)\.(\d+)$/);
+    if (m) boards[m[1] + "." + m[2]] = LS.get(stateKey(m[1], +m[2]), null);
+  }
+  return JSON.stringify({
+    app: "parcels", version: 2, exported: new Date().toISOString(),
+    progress, boards
+  });
+}
+/* returns null on success, or a sentence explaining what went wrong */
+function importData(text){
+  let d;
+  try { d = JSON.parse(text); }
+  catch(e){ return "That isn't readable — paste the whole block, braces and all."; }
+  if (!d || typeof d !== "object" || !d.progress || typeof d.progress !== "object")
+    return "That doesn't look like a Parcels Kids backup.";
+  const p = d.progress;
+
+  // merging keeps the better of the two, so importing never costs you a result
+  const mergeBook = (mine, theirs) => {
+    for (const k in (theirs || {})){
+      const t = theirs[k];
+      if (!t || typeof t.t !== "number") continue;
+      if (!mine[k] || t.t < mine[k].t) mine[k] = {t: t.t, h: t.h || 0};
+    }
+  };
+  mergeBook(progress.daily, p.daily);
+  mergeBook(progress.endless, p.endless);
+
+  if (typeof p.endlessAt === "number")
+    progress.endlessAt = Math.max(progress.endlessAt || 1, p.endlessAt);
+  if (typeof p.best === "number" && p.best > 0)
+    progress.best = progress.best ? Math.min(progress.best, p.best) : p.best;
+  // a streak only means anything next to the day it was last extended
+  if (typeof p.lastDay === "number"){
+    if (p.lastDay > (progress.lastDay || 0)){
+      progress.lastDay = p.lastDay;
+      progress.streak = p.streak || 0;
+    } else if (p.lastDay === progress.lastDay){
+      progress.streak = Math.max(progress.streak || 0, p.streak || 0);
+    }
+  }
+  for (const k in (d.boards || {})){
+    const m = k.match(/^(daily|endless)\.(\d+)$/);
+    if (!m) continue;
+    const key = stateKey(m[1], +m[2]);
+    if (localStorage.getItem(key)) continue;      // never paint over local work
+    LS.set(key, d.boards[k]);
+  }
+  saveProgress();
+  reconcile();
+  return null;
+}
+
+/* ---------- app state ---------- */
+let P = null;
+let region = null;
+let boxes = new Map();
+let nextId = 1;
+let undoStack = [];
+let hintsUsed = 0;
+let elapsed = 0, startedAt = 0, tickHandle = null, finished = false;
+let openedFrom = "home";
+let cellPx = 34;
+let gapPx = 2;
+let drag = null;
+
+const $ = id => document.getElementById(id);
+const boardEl = $("board");
+const fmtTime = ms => { const s = Math.floor(ms/1000); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
+function toast(msg){
+  const t = $("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove("show"), 1600);
+}
+
+/* ---------- home ---------- */
+function renderHome(){
+  const today = todayNumber();
+  const d = progress.daily[today];
+  $("dailyNo").textContent = "Puzzle #" + today;
+  $("dailyWhen").textContent = new Date().toLocaleDateString(undefined,
+    {weekday:"long", month:"long", day:"numeric"});
+  $("dailySt").innerHTML = d
+    ? "<b>✓ Solved</b> in " + fmtTime(d.t) + (d.h ? " · " + d.h + " hint" + (d.h>1?"s":"") : "")
+    : (LS.get(stateKey("daily", today), null) ? "In progress" : "Not yet solved");
+  $("cardDaily").classList.toggle("done", !!d);
+  $("dailyCta").textContent = d ? "Play again" : "Play";
+
+  $("endlessNo").textContent = "Puzzle E" + progress.endlessAt;
+  const n = endlessSolved();
+  $("endlessSt").textContent = n ? n + " solved so far" : "Play as many as you like";
+}
+
+/* ---------- archive: every puzzle ever offered ---------- */
+let archiveTab = "daily";
+function renderArchive(){
+  const daily = archiveTab === "daily";
+  const max = daily ? todayNumber() : Math.max(1, progress.endlessAt);
+  const done = daily ? progress.daily : progress.endless;
+
+  let solved = 0;
+  const frag = document.createDocumentFragment();
+  for (let n = max; n >= 1; n--){
+    const rec = done[n];
+    if (rec) solved++;
+    const started = !rec && !!LS.get(stateKey(archiveTab, n), null);
+    const cell = document.createElement("div");
+    cell.className = "chip" + (rec ? " solved" : (started ? " part" : ""));
+
+    const main = document.createElement("button");
+    main.className = "chipmain";
+    main.innerHTML = '<b class="no">' + (daily ? "#" : "E") + n + '</b>' +
+      (daily ? "<em>" + dailyDate(n) + "</em>" : "") +
+      "<i>" + (rec ? "✓ " + fmtTime(rec.t) : (started ? "resume" : "play")) + "</i>";
+    main.title = rec ? "Look back at your solution" : (started ? "Pick up where you left off" : "Play");
+    main.onclick = () => openPuzzle(archiveTab, n, "archive");
+    cell.appendChild(main);
+
+    // anything already touched can be wiped and played again from scratch
+    if (rec || started){
+      const again = document.createElement("button");
+      again.className = "chipreplay";
+      again.textContent = "↻";
+      again.title = "Play again from an empty grid";
+      again.onclick = e => { e.stopPropagation(); replay(archiveTab, n); };
+      cell.appendChild(again);
+    }
+    frag.appendChild(cell);
+  }
+  const wrap = $("chips");
+  wrap.innerHTML = "";
+  wrap.appendChild(frag);
+  $("archiveCount").textContent = solved + " of " + max + " solved";
+  for (const t of document.querySelectorAll(".tab"))
+    t.classList.toggle("on", t.dataset.tab === archiveTab);
+}
+
+/* ---------- open a puzzle ---------- */
+function openPuzzle(mode, num, from){
+  openedFrom = from || "home";
+  $("viewHome").classList.add("hide");
+  $("viewArchive").classList.add("hide");
+  $("viewGame").classList.remove("hide");
+  document.querySelector("footer").classList.add("hide");   // give the board the room
+  $("btnSkip").classList.toggle("hide", mode !== "endless");
+  boardEl.style.border = "none";
+  boardEl.innerHTML = '<div style="padding:40px;color:var(--ink-3);font-size:13px">Generating…</div>';
+  $("gameSub").textContent = mode === "daily" ? "Puzzle #" + num : "Endless E" + num;
+  $("timer").textContent = "0:00";
+
+  setTimeout(() => {
+    P = generate(mode, num);
+    boardEl.style.border = "";
+    region = new Int16Array(P.w*P.h).fill(-1);
+    boxes = new Map(); nextId = 1; undoStack = [];
+    hintsUsed = 0; elapsed = 0; finished = false;
+
+    const saved = LS.get(stateKey(mode, num), null);
+    if (saved && Array.isArray(saved.boxes)){
+      for (const b of saved.boxes) placeBox(b.r, b.c, b.w, b.h, b.ci);
+      hintsUsed = saved.hints || 0;
+      elapsed = saved.elapsed || 0;
+    }
+    // reopening a puzzle you already finished shows the solved board as it
+    // stands, rather than announcing the win all over again
+    if (isComplete()) finished = true;
+    buildBoard();
+    $("gameSub").textContent = (mode === "daily" ? "Puzzle #" + num : "Endless E" + num) + " · " + P.w + "×" + P.h;
+    startTimer();
+    render();
+  }, 20);
+}
+
+function buildBoard(){
+  const availW = Math.min(720, Math.min(window.innerWidth, 740) - 22);
+  const availH = Math.max(300, window.innerHeight - 278);   // chrome + the board's own frame
+  // a 6x6 would otherwise swell to fill the page; cap it at a big, kid-sized square
+  cellPx = Math.max(20, Math.min(84, Math.floor(availW/P.w), Math.floor(availH/P.h)));
+  boardEl.style.gridTemplateColumns = "repeat(" + P.w + ", " + cellPx + "px)";
+  boardEl.style.gridTemplateRows = "repeat(" + P.h + ", " + cellPx + "px)";
+  gapPx = Math.max(2, Math.round(cellPx*0.055));
+  boardEl.style.setProperty("--gap", gapPx + "px");
+  boardEl.style.setProperty("--round", Math.max(3, Math.round(cellPx*0.11)) + "px");
+  boardEl.innerHTML = "";
+  for (let i=0;i<P.w*P.h;i++){
+    const r=(i/P.w)|0, c=i%P.w;
+    const d = document.createElement("div");
+    d.className = "cell" + (r===0?" r0":"") + (c===0?" c0":"");
+    d.style.fontSize = Math.round(cellPx*0.62) + "px";
+    const ci = P.clueAt[i];
+    if (ci !== -1){
+      const s = document.createElement("span");
+      s.className = "num"; s.textContent = P.clues[ci].val;
+      d.appendChild(s);
+    }
+    boardEl.appendChild(d);
+  }
+  const pv = document.createElement("div");
+  pv.className = "preview hide"; pv.id = "preview";
+  pv.innerHTML = "<span></span>";
+  boardEl.appendChild(pv);
+}
+
+/* ---------- box colours ----------
+   Every box on the board gets its own colour, fixed the moment it is drawn
+   and never recomputed, so adding or removing a box leaves every other box
+   looking exactly as it did. Hues step by the golden angle, which keeps even
+   neighbouring indices far apart on the wheel.                             */
+const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+function paletteColour(i){
+  const hue = (i * 137.508) % 360;
+  return darkQuery.matches
+    ? "hsl(" + hue.toFixed(1) + " " + (34 + (i%3)*6) + "% " + (24 + (i%4)*4) + "%)"
+    : "hsl(" + hue.toFixed(1) + " " + (58 + (i%3)*8) + "% " + (82 + (i%4)*3) + "%)";
+}
+function freeColour(){
+  const used = new Set();
+  for (const b of boxes.values()) used.add(b.ci);
+  let i = 0;
+  while (used.has(i)) i++;      // at most 99 boxes fit, so this always lands
+  return i;
+}
+
+/* ---------- box operations ---------- */
+const snapshot = () => ({
+  boxes: [...boxes.values()].map(b => ({r:b.r, c:b.c, w:b.w, h:b.h, ci:b.ci})),
+  hints: hintsUsed
+});
+function restore(s){
+  region.fill(-1); boxes = new Map();
+  for (const b of s.boxes) placeBox(b.r,b.c,b.w,b.h,b.ci);
+  hintsUsed = s.hints;
+}
+function placeBox(r,c,w,h,ci){
+  const id = nextId++;
+  boxes.set(id, {id, r, c, w, h, ci: (ci === undefined ? freeColour() : ci)});
+  for (let rr=r;rr<r+h;rr++) for (let cc=c;cc<c+w;cc++) region[rr*P.w+cc] = id;
+  return id;
+}
+function removeBox(id){
+  const b = boxes.get(id);
+  if (!b) return;
+  for (let rr=b.r;rr<b.r+b.h;rr++) for (let cc=b.c;cc<b.c+b.w;cc++) region[rr*P.w+cc] = -1;
+  boxes.delete(id);
+}
+function clearArea(r,c,w,h){
+  const hit = new Set();
+  for (let rr=r;rr<r+h;rr++) for (let cc=c;cc<c+w;cc++){
+    const id = region[rr*P.w+cc];
+    if (id !== -1) hit.add(id);
+  }
+  for (const id of hit) removeBox(id);
+}
+function commit(r0,c0,r1,c1){
+  const r = Math.min(r0,r1), c = Math.min(c0,c1);
+  const h = Math.abs(r1-r0)+1, w = Math.abs(c1-c0)+1;
+
+  if (w===1 && h===1){
+    // a tap, not a drag: it only ever takes an existing box away, and on
+    // bare grid it does nothing at all
+    const id = region[r*P.w+c];
+    if (id === -1) return;
+    undoStack.push(snapshot());
+    removeBox(id);
+  } else {
+    undoStack.push(snapshot());
+    clearArea(r,c,w,h);
+    placeBox(r,c,w,h);
+  }
+  render();
+}
+function boxOk(b){
+  let count = 0, val = -1;
+  for (let rr=b.r;rr<b.r+b.h;rr++) for (let cc=b.c;cc<b.c+b.w;cc++){
+    const ci = P.clueAt[rr*P.w+cc];
+    if (ci !== -1){ count++; val = P.clues[ci].val; }
+  }
+  return count === 1 && val === b.w*b.h;
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const cells = boardEl.children;
+  const okById = new Map();
+  for (const b of boxes.values()) okById.set(b.id, boxOk(b));
+
+  let covered = 0;
+  for (let i=0;i<P.w*P.h;i++){
+    const el = cells[i], r=(i/P.w)|0, c=i%P.w, id = region[i];
+    el.className = "cell" + (r===0?" r0":"") + (c===0?" c0":"");
+    if (id === -1) continue;
+    covered++;
+    // every box wears its own colour; a wrong one just wears it faintly
+    el.classList.add("tile");
+    el.style.setProperty("--fill", paletteColour(boxes.get(id).ci));
+    if (!okById.get(id)) el.classList.add("bad");
+    // pull the fill in wherever this box ends, so boxes never touch
+    if (r===0 || region[i-P.w] !== id) el.classList.add("gt");
+    if (c===0 || region[i-1] !== id) el.classList.add("gl");
+    if (r===P.h-1 || region[i+P.w] !== id) el.classList.add("gb");
+    if (c===P.w-1 || region[i+1] !== id) el.classList.add("gr");
+  }
+
+  const pct = Math.round(covered/(P.w*P.h)*100);
+  $("progText").textContent = pct + "%";
+  $("progBar").style.width = pct + "%";
+  $("hintCount").textContent = hintsUsed;
+
+  saveState();
+  if (!finished) checkWin();
+}
+
+/* ---------- pointer input ---------- */
+function cellFromEvent(e){
+  const rect = boardEl.getBoundingClientRect();
+  const x = e.clientX - rect.left - (rect.width - boardEl.clientWidth)/2;
+  const y = e.clientY - rect.top - (rect.height - boardEl.clientHeight)/2;
+  return {
+    r: Math.max(0, Math.min(P.h-1, Math.floor(y / cellPx))),
+    c: Math.max(0, Math.min(P.w-1, Math.floor(x / cellPx)))
+  };
+}
+/* the colour placeBox will hand this box, allowing for the boxes the drag
+   is about to wipe out and so free up again */
+function prospectiveColour(r,c,w,h){
+  const doomed = new Set();
+  for (let rr=r;rr<r+h;rr++) for (let cc=c;cc<c+w;cc++){
+    const id = region[rr*P.w+cc];
+    if (id !== -1) doomed.add(id);
+  }
+  const used = new Set();
+  for (const b of boxes.values()) if (!doomed.has(b.id)) used.add(b.ci);
+  let i = 0;
+  while (used.has(i)) i++;
+  return paletteColour(i);
+}
+
+function showPreview(r0,c0,r1,c1){
+  const pv = $("preview");
+  const r = Math.min(r0,r1), c = Math.min(c0,c1);
+  const h = Math.abs(r1-r0)+1, w = Math.abs(c1-c0)+1;
+  if (w*h === 1){ pv.classList.add("hide"); return; }   // nothing gets drawn yet
+  pv.classList.remove("hide");
+  // inset by the gap so the preview sits exactly where the finished tile will
+  pv.style.left = (c*cellPx + gapPx) + "px";
+  pv.style.top = (r*cellPx + gapPx) + "px";
+  pv.style.width = (w*cellPx - gapPx*2) + "px";
+  pv.style.height = (h*cellPx - gapPx*2) + "px";
+  pv.style.setProperty("--pfill", prospectiveColour(r,c,w,h));
+
+  // exactly one number, and it matches the area? then preview it rounded,
+  // the same way it will look once placed
+  let count = 0, val = -1;
+  for (let rr=r;rr<r+h;rr++) for (let cc=c;cc<c+w;cc++){
+    const ci = P.clueAt[rr*P.w+cc];
+    if (ci !== -1){ count++; val = P.clues[ci].val; }
+  }
+  pv.classList.toggle("ok", count === 1 && val === w*h);
+  pv.querySelector("span").textContent = w*h;   // squares covered so far
+}
+boardEl.addEventListener("pointerdown", e => {
+  if (!P || finished) return;
+  const {r,c} = cellFromEvent(e);
+  drag = {r0:r, c0:c, r1:r, c1:c};
+  boardEl.setPointerCapture(e.pointerId);
+  showPreview(r,c,r,c);
+  e.preventDefault();
+});
+boardEl.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const {r,c} = cellFromEvent(e);
+  if (r === drag.r1 && c === drag.c1) return;
+  drag.r1 = r; drag.c1 = c;
+  showPreview(drag.r0, drag.c0, r, c);
+});
+boardEl.addEventListener("pointerup", () => {
+  if (!drag) return;
+  $("preview").classList.add("hide");
+  commit(drag.r0, drag.c0, drag.r1, drag.c1);
+  drag = null;
+});
+boardEl.addEventListener("pointercancel", () => { $("preview").classList.add("hide"); drag = null; });
+boardEl.addEventListener("contextmenu", e => e.preventDefault());
+
+/* ---------- tools ---------- */
+function undo(){
+  if (finished || !undoStack.length) return;
+  restore(undoStack.pop());
+  render();
+}
+function clearAll(){
+  if (finished || !boxes.size) return;
+  undoStack.push(snapshot());
+  region.fill(-1); boxes = new Map();
+  render();
+}
+function hint(){
+  if (finished) return;
+  const missing = P.rects.filter(rc => {
+    const id = region[rc.r*P.w + rc.c];
+    if (id === -1) return true;
+    const b = boxes.get(id);
+    return !(b.r===rc.r && b.c===rc.c && b.w===rc.w && b.h===rc.h);
+  });
+  if (!missing.length) return;
+  const rc = missing[Math.floor(Math.random()*missing.length)];
+  undoStack.push(snapshot());
+  clearArea(rc.r, rc.c, rc.w, rc.h);
+  placeBox(rc.r, rc.c, rc.w, rc.h);
+  hintsUsed++;
+  render();
+}
+function saveState(){
+  if (!P) return;
+  LS.set(stateKey(P.mode, P.num), {
+    boxes: [...boxes.values()].map(b => ({r:b.r, c:b.c, w:b.w, h:b.h, ci:b.ci})),
+    hints: hintsUsed,
+    elapsed: elapsed + (finished ? 0 : Date.now() - startedAt)
+  });
+}
+function startTimer(){
+  clearInterval(tickHandle);
+  startedAt = Date.now();
+  $("timer").textContent = fmtTime(elapsed);
+  tickHandle = setInterval(() => {
+    if (!finished) $("timer").textContent = fmtTime(elapsed + (Date.now() - startedAt));
+  }, 500);
+}
+
+/* ---------- winning ---------- */
+function isComplete(){
+  for (let i=0;i<region.length;i++) if (region[i] === -1) return false;
+  for (const b of boxes.values()) if (!boxOk(b)) return false;
+  return true;
+}
+/* wipe the board and start this puzzle over; the recorded result stands */
+function replay(mode, num){
+  LS.del(stateKey(mode, num));
+  openPuzzle(mode, num, "archive");
+}
+function checkWin(){
+  if (!isComplete()) return;
+
+  finished = true;
+  clearInterval(tickHandle);
+  const total = elapsed + (Date.now() - startedAt);
+  elapsed = total;
+  $("timer").textContent = fmtTime(total);
+
+  const clean = hintsUsed === 0;
+  if (clean && (!progress.best || total < progress.best)) progress.best = total;
+
+  if (P.mode === "daily"){
+    const prev = progress.daily[P.num];
+    if (!prev || total < prev.t) progress.daily[P.num] = {t:total, h:hintsUsed};
+    const today = todayNumber();
+    if (P.num === today && progress.lastDay !== today){
+      progress.streak = (progress.lastDay === today-1) ? (progress.streak||0)+1 : 1;
+      progress.lastDay = today;
+    }
+  } else {
+    const prev = progress.endless[P.num];
+    if (!prev || total < prev.t) progress.endless[P.num] = {t:total, h:hintsUsed};
+    if (P.num >= progress.endlessAt) progress.endlessAt = P.num + 1;
+  }
+  saveProgress();
+  saveState();
+  setTimeout(() => showWin(total), 350);
+}
+
+function showWin(total){
+  const isDaily = P.mode === "daily";
+  const share = isDaily
+    ? "Parcels Kids #" + P.num + " · 6×6\n⏱ " + fmtTime(total) +
+      (hintsUsed ? " · " + hintsUsed + " hint" + (hintsUsed>1?"s":"") : " · no hints") +
+      (progress.streak > 1 ? "\n🔥 " + progress.streak + " day streak" : "")
+    : "Parcels Kids Endless E" + P.num + " · 6×6\n⏱ " + fmtTime(total) +
+      (hintsUsed ? " · " + hintsUsed + " hint" + (hintsUsed>1?"s":"") : " · no hints");
+
+  modal(
+    '<h3>All parcelled out</h3>' +
+    '<p>' + (isDaily ? "Daily puzzle #" + P.num : "Endless puzzle E" + P.num) + ' — every square accounted for.</p>' +
+    '<div class="stat">' +
+      '<div><div class="k">' + fmtTime(total) + '</div><div class="l">Time</div></div>' +
+      '<div><div class="k">' + hintsUsed + '</div><div class="l">Hints</div></div>' +
+      '<div><div class="k">' + (isDaily ? (progress.streak||0) : endlessSolved()) + '</div>' +
+        '<div class="l">' + (isDaily ? "Day streak" : "Endless solved") + '</div></div>' +
+    '</div>' +
+    '<div class="row">' +
+      '<button class="btn" data-act="share">Copy result</button>' +
+      (isDaily
+        ? '<button class="btn primary" data-act="endless">Play endless ›</button>'
+        : '<button class="btn primary" data-act="next">Next puzzle ›</button>') +
+    '</div>' +
+    '<div class="row"><button class="btn" data-act="home">Back to menu</button></div>',
+    (act, close) => {
+      if (act === "share") navigator.clipboard.writeText(share).then(()=>toast("Result copied"), ()=>toast("Copy failed"));
+      else if (act === "next"){ close(); openPuzzle("endless", progress.endlessAt); }
+      else if (act === "endless"){ close(); openPuzzle("endless", progress.endlessAt); }
+      else if (act === "home"){ close(); goHome(); }
+    }
+  );
+}
+
+/* ---------- modal ---------- */
+function modal(html, onAct){
+  const scrim = document.createElement("div");
+  scrim.className = "scrim";
+  scrim.innerHTML = '<div class="modal">' + html + '</div>';
+  const close = () => scrim.remove();
+  scrim.addEventListener("click", e => {
+    if (e.target === scrim) return close();
+    const b = e.target.closest("[data-act]");
+    if (b) onAct && onAct(b.dataset.act, close);
+  });
+  document.body.appendChild(scrim);
+  return close;
+}
+
+function goHome(){
+  clearInterval(tickHandle);
+  saveState();
+  $("viewGame").classList.add("hide");
+  $("viewArchive").classList.add("hide");
+  $("viewHome").classList.remove("hide");
+  document.querySelector("footer").classList.remove("hide");
+  renderHome();
+}
+function showArchive(){
+  clearInterval(tickHandle);
+  saveState();
+  $("viewGame").classList.add("hide");
+  $("viewHome").classList.add("hide");
+  $("viewArchive").classList.remove("hide");
+  document.querySelector("footer").classList.remove("hide");
+  renderArchive();
+}
+/* leaving a puzzle returns you wherever you opened it from */
+function goBack(){ openedFrom === "archive" ? showArchive() : goHome(); }
+
+/* ---------- wiring ---------- */
+// the card says "Play again" once solved, so that is what it should do
+$("cardDaily").onclick = () => {
+  const n = todayNumber();
+  progress.daily[n] ? replay("daily", n) : openPuzzle("daily", n);
+};
+$("cardEndless").onclick = () => openPuzzle("endless", progress.endlessAt);
+$("btnArchive").onclick = showArchive;
+$("btnArchiveBack").onclick = goHome;
+for (const t of document.querySelectorAll(".tab"))
+  t.onclick = () => { archiveTab = t.dataset.tab; renderArchive(); };
+$("btnBack").onclick = goBack;
+$("btnUndo").onclick = undo;
+$("btnClear").onclick = clearAll;
+$("btnHint").onclick = hint;
+$("btnSkip").onclick = () => {
+  if (!P || P.mode !== "endless") return;
+  LS.del(stateKey("endless", P.num));            // abandoned, don't keep the scraps
+  const next = Math.max(progress.endlessAt, P.num + 1);
+  progress.endlessAt = next; saveProgress();
+  openPuzzle("endless", next);
+};
+
+$("btnHelp").onclick = () => modal(
+  '<h3>How to play</h3>' +
+  '<p>Cut the whole grid into rectangular boxes.</p>' +
+  '<ul>' +
+    '<li>Every box contains <b>exactly one number</b>.</li>' +
+    '<li>The number says <b>how many squares</b> that box covers — a 4 might be 2×2, 1×4 or 4×1.</li>' +
+    '<li>Boxes never overlap, and no square is left outside a box.</li>' +
+  '</ul>' +
+  '<div class="demo">' +
+    '<div class="a r0 c0">4</div><div class="a r0"></div><div class="b r0"></div><div class="b r0">4</div>' +
+    '<div class="a c0"></div><div class="a"></div><div class="b"></div><div class="b"></div>' +
+    '<div class="c c0">2</div><div class="d"></div><div class="d"></div><div class="d"></div>' +
+    '<div class="c c0"></div><div class="d"></div><div class="d">6</div><div class="d"></div>' +
+  '</div>' +
+  '<p>Drag across the grid to draw a box. Tap an existing box to take it away. A box of the right size fills in solid with rounded corners; one that is still the wrong size stays faint, with the grid showing through.</p>' +
+  '<p>Every grid is 6×6 and pitched at about the same difficulty — always solvable by reasoning alone, never by guessing.</p>' +
+  '<p><b>Daily</b> gives everyone the same puzzle, in the same order, each day; puzzle #1 was 1 January 2026. <b>Endless</b> keeps handing you new ones. Every puzzle from either, going all the way back, is in the archive.</p>' +
+  '<div class="row"><button class="btn primary" data-act="ok">Got it</button></div>',
+  (a, close) => close()
+);
+
+$("btnStats").onclick = () => {
+  const days = Object.keys(progress.daily).length;
+  modal(
+    '<h3>Statistics</h3>' +
+    '<div class="stat">' +
+      '<div><div class="k">' + days + '</div><div class="l">Daily solved</div></div>' +
+      '<div><div class="k">' + (progress.streak||0) + '</div><div class="l">Day streak</div></div>' +
+      '<div><div class="k">' + endlessSolved() + '</div><div class="l">Endless solved</div></div>' +
+    '</div>' +
+    '<p>Best time without hints: <b>' + (progress.best ? fmtTime(progress.best) : "—") + '</b></p>' +
+    '<p style="font-size:12.5px">Your record is kept by this browser, at this address. ' +
+      'Copy it to carry it to another one.</p>' +
+    '<div class="row">' +
+      '<button class="btn" data-act="export">Copy progress</button>' +
+      '<button class="btn" data-act="import">Restore progress</button>' +
+    '</div>' +
+    '<div class="row">' +
+      '<button class="btn" data-act="reset">Reset progress</button>' +
+      '<button class="btn primary" data-act="ok">Close</button>' +
+    '</div>',
+    (act, close) => {
+      if (act === "reset"){
+        progress = blankProgress();
+        saveProgress(); close(); goHome(); toast("Progress reset");
+      } else if (act === "export"){
+        const text = exportData();
+        navigator.clipboard.writeText(text).then(
+          () => toast("Progress copied"),
+          () => { close(); showExport(text); }      // clipboard blocked: show it instead
+        );
+      } else if (act === "import"){
+        close(); askImport();
+      } else close();
+    }
+  );
+};
+
+function showExport(text){
+  modal(
+    '<h3>Copy your progress</h3>' +
+    '<p>Select all of this and copy it, then paste it into <b>Restore progress</b> at the other address.</p>' +
+    '<textarea rows="7" id="exportBox" readonly></textarea>' +
+    '<div class="row"><button class="btn primary" data-act="ok">Done</button></div>',
+    (a, close) => close()
+  );
+  const box = $("exportBox");
+  box.value = text;
+  box.focus(); box.select();
+}
+
+function askImport(){
+  modal(
+    '<h3>Restore progress</h3>' +
+    '<p>Paste the block you copied from the other address. Anything already ' +
+      'on this browser is kept — the better time of the two wins.</p>' +
+    '<textarea rows="7" id="importBox" placeholder="{ … }"></textarea>' +
+    '<div class="row">' +
+      '<button class="btn" data-act="cancel">Cancel</button>' +
+      '<button class="btn primary" data-act="go">Restore</button>' +
+    '</div>',
+    (act, close) => {
+      if (act !== "go") return close();
+      const was = Object.keys(progress.daily).length + endlessSolved();
+      const err = importData(($("importBox").value || "").trim());
+      if (err) return toast(err);
+      const now = Object.keys(progress.daily).length + endlessSolved();
+      close(); goHome();
+      toast(now > was ? "Restored — " + (now - was) + " more solved" : "Restored");
+    }
+  );
+}
+
+document.addEventListener("keydown", e => {
+  if ($("viewGame").classList.contains("hide") || document.querySelector(".scrim")) return;
+  const k = e.key.toLowerCase();
+  if (k === "z"){ undo(); e.preventDefault(); }
+  else if (k === "h"){ hint(); e.preventDefault(); }
+});
+window.addEventListener("resize", () => {
+  if (P && !$("viewGame").classList.contains("hide")){ buildBoard(); render(); }
+});
+// fills are computed in JS, so they need redrawing when the theme flips
+darkQuery.addEventListener("change", () => {
+  if (P && !$("viewGame").classList.contains("hide")) render();
+});
+window.addEventListener("beforeunload", saveState);
+
+reconcile();
+renderHome();
+if (!LS.get("parcels.kids.v1.seen", false)){
+  LS.set("parcels.kids.v1.seen", true);
+  $("btnHelp").click();
+}
+</script>
+</body>
+</html>
